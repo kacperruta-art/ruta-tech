@@ -5,7 +5,7 @@ import { structure, defaultDocumentNode } from '@/sanity/structure'
 import { projectId, dataset } from '@/sanity/env'
 
 // Import the logo we just created
-import { RutaLogo } from '@/sanity/components/RutaLogo'
+import { RutaLogo } from './sanity/components/RutaLogo'
 
 export default defineConfig({
   basePath: '/studio',
