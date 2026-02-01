@@ -1,178 +1,182 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [isDark, setIsDark] = useState(false);
-  const [language, setLanguage] = useState<"DE" | "EN">("DE"); // for visual switcher
+  const [language, setLanguage] = useState<"DE" | "EN">("DE");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Translations dictionary as required
+  // Tłumaczenia
   const translations = {
     DE: {
       brandSub: "Facility Management System",
-      emailLabel: "> E-MAIL",
-      passwordLabel: "> PASSWORT",
-      btnLogin: "ANMELDEN",
-      btnLoading: "VERBINDUNG...",
+      emailLabel: "E-MAIL ADRESSE",
+      passwordLabel: "PASSWORT",
+      btnLogin: "Anmelden",
+      btnLoading: "Verbindung...",
       backLink: "← Zur Hauptseite",
     },
     EN: {
       brandSub: "Facility Management System",
-      emailLabel: "> E-MAIL",
-      passwordLabel: "> PASSWORD",
-      btnLogin: "LOGIN",
-      btnLoading: "CONNECTING...",
+      emailLabel: "EMAIL ADDRESS",
+      passwordLabel: "PASSWORD",
+      btnLogin: "Login",
+      btnLoading: "Connecting...",
       backLink: "← Back to Home",
-    }
+    },
   };
 
-  // Handle theme toggle
+  const t = translations[language];
+
+  // Obsługa Dark Mode zgodnie z Twoim globals.css (.dark class)
+  useEffect(() => {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setIsDark(true);
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
+
   const handleThemeToggle = () => {
     setIsDark((prev) => {
       const newTheme = !prev;
-      if (typeof document !== "undefined") {
-        if (newTheme) {
-          document.documentElement.setAttribute("data-theme", "dark");
-        } else {
-          document.documentElement.removeAttribute("data-theme");
-        }
+      if (newTheme) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
       }
       return newTheme;
     });
   };
 
-  // Language switcher
-  const handleLangSwitch = (lang: "DE" | "EN") => setLanguage(lang);
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate network/loading
+    // Symulacja logowania -> przekierowanie do Sanity Studio
     setTimeout(() => {
       setLoading(false);
       router.push("/studio");
     }, 1500);
   };
 
-  // Short alias for current language
-  const t = translations;
-
   return (
-    <div className="wrapper">
-      <header className="login-header">
-        <div className="brand">
-          <a href="/" style={{ textDecoration: "none", color: "inherit" }}>
-            RUTA<span className="highlight">//</span>TECH
-          </a>
+    // Używamy zmiennych z Twojego globals.css
+    <div className="flex min-h-screen w-full flex-col bg-[var(--background)] text-[var(--foreground)] font-sans transition-colors duration-300">
+      
+      {/* HEADER */}
+      <header className="flex w-full items-center justify-between px-6 py-6">
+        {/* LOGO TEXT */}
+        <div className="flex items-center gap-1 text-lg font-bold tracking-tight">
+          <span>RUTA</span>
+          <span className="text-[var(--brand)]">//</span>
+          <span>TECH</span>
         </div>
-        <div className="header-right">
-          <div className="theme-toggle">
+
+        {/* CONTROLS */}
+        <div className="flex items-center gap-6 text-sm font-medium text-[var(--muted)]">
+          <button
+            onClick={handleThemeToggle}
+            className="hover:text-[var(--foreground)] transition-colors"
+          >
+            {isDark ? "LIGHT" : "DARK"}
+          </button>
+
+          <div className="flex items-center gap-2">
             <button
-              type="button"
-              className="theme-toggle-btn"
-              data-theme-toggle="true"
-              aria-pressed={isDark}
-              aria-label="Toggle dark mode"
-              onClick={handleThemeToggle}
-            >
-              {isDark ? "DARK" : "LIGHT"}
-            </button>
-          </div>
-          <div className="language-switcher" style={{ marginLeft: 16, display: "inline-block" }}>
-            <span
-              onClick={() => handleLangSwitch("DE")}
-              style={{
-                fontWeight: language === "DE" ? 700 : 400,
-                cursor: "pointer",
-                opacity: language === "DE" ? 1 : 0.55,
-                letterSpacing: "0.02em",
-                marginRight: 5,
-              }}
-              aria-current={language === "DE" ? "true" : undefined}
+              onClick={() => setLanguage("DE")}
+              className={`transition-colors ${language === "DE" ? "text-[var(--foreground)] font-bold" : "hover:text-[var(--foreground)]"}`}
             >
               DE
-            </span>
-            <span style={{ opacity: 0.5 }}>|</span>
-            <span
-              onClick={() => handleLangSwitch("EN")}
-              style={{
-                fontWeight: language === "EN" ? 700 : 400,
-                cursor: "pointer",
-                opacity: language === "EN" ? 1 : 0.55,
-                letterSpacing: "0.02em",
-                marginLeft: 5,
-              }}
-              aria-current={language === "EN" ? "true" : undefined}
+            </button>
+            <span className="opacity-30">|</span>
+            <button
+              onClick={() => setLanguage("EN")}
+              className={`transition-colors ${language === "EN" ? "text-[var(--foreground)] font-bold" : "hover:text-[var(--foreground)]"}`}
             >
               EN
-            </span>
-          </div>
-          <div className="system-status" style={{ marginLeft: 24 }}>
-            IMMO PORTAL
+            </button>
           </div>
         </div>
       </header>
-      <main className="login-page">
-        <div className="login-box">
-          <div className="login-brand">
-            RUTA<span className="highlight">//</span>TECH
+
+      {/* MAIN CONTENT */}
+      <main className="flex flex-1 flex-col items-center justify-center p-4">
+        
+        {/* CARD - Używamy var(--surface) i var(--border) */}
+        <div className="w-full max-w-[400px] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-xl animate-in fade-in zoom-in duration-500">
+          
+          {/* BRANDING CENTERED */}
+          <div className="mb-8 flex flex-col items-center text-center">
+            {/* Favicon jako logo */}
+            <img src="/favicon.ico" alt="Logo" className="mb-6 h-12 w-12 object-contain opacity-90" />
+            
+            <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
+              Admin Portal
+            </h1>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              {t.brandSub}
+            </p>
           </div>
-          <div className="login-sub">{t[language].brandSub}</div>
-          <form id="loginForm" autoComplete="on" onSubmit={handleSubmit}>
-            <div className="input-group">
-              <label htmlFor="email">{t[language].emailLabel}</label>
+
+          {/* FORM */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                {t.emailLabel}
+              </label>
               <input
                 type="email"
-                name="email"
                 id="email"
-                className="terminal-input"
-                placeholder="name@domain.com"
                 required
-                autoComplete="email"
                 disabled={loading}
+                placeholder="admin@ruta-tech.ch"
+                // Input style: tło background (żeby odciąć się od surface karty), ramka border
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]/50 focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] transition-all"
               />
             </div>
-            <div className="input-group">
-              <label htmlFor="password">{t[language].passwordLabel}</label>
+
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                {t.passwordLabel}
+              </label>
               <input
                 type="password"
-                name="password"
                 id="password"
-                className="terminal-input"
-                placeholder="••••••••"
                 required
-                autoComplete="current-password"
                 disabled={loading}
+                placeholder="••••••••"
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]/50 focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] transition-all"
               />
             </div>
-            <button type="submit" className="btn primary" disabled={loading}>
-              {loading ? (
-                <>
-                  <span className="blink" style={{ marginRight: 6, color: "#04f" }}>●</span>
-                  {t[language].btnLoading}
-                </>
-              ) : (
-                <>
-                  <span className="bracket">[</span> {t[language].btnLogin} <span className="bracket">]</span>
-                </>
-              )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              // Button style: Tło brand, tekst biały
+              className="mt-4 w-full rounded-xl bg-[var(--brand)] py-3.5 font-semibold text-white shadow-lg shadow-[var(--brand)]/20 transition-all hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {loading ? t.btnLoading : t.btnLogin}
             </button>
           </form>
-          <p className="login-back" style={{ marginTop: 28 }}>
-            <a href="/">{t[language].backLink}</a>
-          </p>
         </div>
+
+        {/* BACK LINK */}
+        <div className="mt-8 text-center">
+          <a href="/" className="text-sm font-medium text-[var(--muted)] hover:text-[var(--brand)] transition-colors">
+            {t.backLink}
+          </a>
+        </div>
+
       </main>
-      <footer style={{ marginTop: "auto", padding: "24px 0" }}>
-        <div className="footer-col">
-          <span className="mono">RUTA TECHNOLOGIES</span>
-          <br />
-          immo.ruta-tech.ch
-        </div>
+
+      {/* FOOTER */}
+      <footer className="py-6 text-center text-xs text-[var(--muted)]">
+        <p className="font-semibold">RUTA TECHNOLOGIES</p>
+        <p>immo.ruta-tech.ch</p>
       </footer>
+
     </div>
   );
 }
