@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-// --- TYPES & HELPERS (Logic in English) ---
+// --- TYPES & HELPERS ---
 type Message = { role: 'user' | 'assistant'; content: string }
 
 export type AssetHeaderInfo = {
@@ -44,7 +44,7 @@ function buildBreadcrumbs(location: LocationInfo): string {
   return [propertyName, sectionName, unitName].filter(Boolean).join(' • ')
 }
 
-// --- ICONS (Minimalist SVG) ---
+// --- ICONS (Sleek, minimal) ---
 function IconAttach() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -64,7 +64,7 @@ function IconSend() {
 
 function IconBot() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 8V4H8" />
       <rect width="16" height="12" x="4" y="8" rx="2" />
       <path d="M2 14h2" />
@@ -107,7 +107,6 @@ export function ChatClient({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const storageKey = `${STORAGE_KEY_PREFIX}-${clientSlug}-${assetId}`
 
-  // --- LOGIC (No changes to functionality) ---
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
@@ -135,14 +134,14 @@ export function ChatClient({
       try {
         imageBase64 = await fileToBase64(imageFile)
       } catch {
-        setError('Bildverarbeitung fehlgeschlagen') // DE Error
+        setError('Bildverarbeitung fehlgeschlagen')
         setIsLoading(false)
         return
       }
     }
 
     const payload = {
-      message: message.trim() || '(Bild gesendet)', // DE fallback
+      message: message.trim() || '(Bild gesendet)',
       pin: currentPin,
       publicId: assetId,
       ...(imageBase64 && { image: imageBase64 }),
@@ -160,12 +159,12 @@ export function ChatClient({
         localStorage.removeItem(storageKey)
         setPin('')
         setIsAuthenticated(false)
-        setError('Ungültiger PIN Code') // DE Error
+        setError('Ungültiger PIN-Code')
         setIsLoading(false)
         return
       }
       if (!res.ok) {
-        setError(data?.error ?? 'Anfrage fehlgeschlagen') // DE Error
+        setError(data?.error ?? 'Anfrage fehlgeschlagen')
         setIsLoading(false)
         return
       }
@@ -175,7 +174,7 @@ export function ChatClient({
       }
 
       const userContent = [message.trim(), imageFile && '[Bild angehängt]'].filter(Boolean).join(' ') || '[Bild]'
-      
+
       setMessages((prev) => [
         ...prev,
         { role: 'user' as const, content: userContent },
@@ -184,7 +183,7 @@ export function ChatClient({
       setImage(null)
       setInputValue('')
     } catch {
-      setError('Netzwerkfehler. Bitte erneut versuchen.') // DE Error
+      setError('Netzwerkfehler. Bitte erneut versuchen.')
     } finally {
       setIsLoading(false)
     }
@@ -193,7 +192,7 @@ export function ChatClient({
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!pin.trim()) return
-    sendMessage('Hallo') // Initial handshake message
+    sendMessage('Hallo')
   }
 
   const handleSendSubmit = (e: React.FormEvent) => {
@@ -209,28 +208,88 @@ export function ChatClient({
     e.target.value = ''
   }
 
-  // --- RENDER UI (Gemini Style + DE Translations) ---
-
-  // 1. Loading State
-  if (!hasCheckedStorage) {
-    return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-white dark:bg-[#0f0f0f]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200" style={{ borderTopColor: 'var(--accent)' }} />
-      </div>
-    )
+  // --- STYLES: Override globals. Enterprise chat UI. ---
+  const chatStyles = {
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  }
+  const light = {
+    bg: '#ffffff',
+    text: '#0f172a',
+    border: '#e2e8f0',
+    bubbleUserBg: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+    bubbleAiBg: '#f8fafc',
+    inputBg: '#ffffff',
+    muted: '#64748b',
+  }
+  const dark = {
+    bg: '#09090b',
+    text: '#e2e8f0',
+    border: 'rgba(226, 232, 240, 0.12)',
+    bubbleUserBg: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+    bubbleAiBg: 'rgba(255,255,255,0.04)',
+    inputBg: 'rgba(255,255,255,0.06)',
+    muted: '#94a3b8',
   }
 
-  // 2. Invalid Asset State
-  if (!assetId) return <div className="flex min-h-[100dvh] items-center justify-center bg-white text-gray-500 font-sans">Objekt nicht gefunden (Invalid Asset)</div>
+  const chatRootCss = `
+    [data-chat-root],
+    [data-chat-root] * {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    }
+    [data-chat-root] {
+      --chat-bg: ${light.bg};
+      --chat-text: ${light.text};
+      --chat-border: ${light.border};
+      --chat-muted: ${light.muted};
+      --chat-bubble-user-bg: ${light.bubbleUserBg};
+      --chat-bubble-ai-bg: ${light.bubbleAiBg};
+      --chat-input-bg: ${light.inputBg};
+      --chat-bg-overlay: rgba(255, 255, 255, 0.85);
+      --chat-card-bg: #f8fafc;
+    }
+    [data-theme="dark"] [data-chat-root],
+    .dark [data-chat-root] {
+      --chat-bg: ${dark.bg};
+      --chat-text: ${dark.text};
+      --chat-border: ${dark.border};
+      --chat-muted: ${dark.muted};
+      --chat-bubble-user-bg: ${dark.bubbleUserBg};
+      --chat-bubble-ai-bg: ${dark.bubbleAiBg};
+      --chat-input-bg: ${dark.inputBg};
+      --chat-bg-overlay: rgba(9, 9, 11, 0.85);
+      --chat-card-bg: #18181b;
+    }
+  `
 
-  // 3. Login Screen (PIN) - Modern & Clean
-  if (!isAuthenticated) {
-    return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-gray-50 px-4 font-sans dark:bg-[#050505]">
-        <div className="w-full max-w-sm overflow-hidden rounded-3xl bg-white p-8 shadow-2xl dark:bg-[#111] dark:shadow-none dark:border dark:border-white/10">
+  // Single root so CSS variables apply to all states (loading, invalid, PIN, chat)
+  const content =
+    !hasCheckedStorage ? (
+      <div className="flex flex-1 items-center justify-center">
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-2 border-transparent"
+          style={{ borderTopColor: 'var(--accent)', borderRightColor: 'var(--chat-border)' }}
+        />
+      </div>
+    ) : !assetId ? (
+      <div className="flex flex-1 items-center justify-center" style={{ color: 'var(--chat-text)' }}>
+        Objekt nicht gefunden
+      </div>
+    ) : !isAuthenticated ? (
+      <div className="flex flex-1 items-center justify-center px-4" style={{ color: 'var(--chat-text)' }}>
+        <div
+          className="w-full max-w-sm overflow-hidden rounded-2xl p-8 shadow-lg"
+          style={{
+            backgroundColor: 'var(--chat-card-bg)',
+            border: '1px solid var(--chat-border)',
+          }}
+        >
           <div className="mb-8 text-center">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Zugriffsberechtigung</h1>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Bitte geben Sie den Objekt-PIN ein, um den Techniker-Assistenten zu starten.</p>
+            <h1 className="text-2xl font-semibold" style={{ color: 'var(--chat-text)' }}>
+              Zugriffsberechtigung
+            </h1>
+            <p className="mt-2 text-sm" style={{ color: 'var(--chat-muted)' }}>
+              Bitte geben Sie den Objekt-PIN ein, um den Assistenten zu starten.
+            </p>
           </div>
           <form onSubmit={handlePinSubmit} className="space-y-4">
             <input
@@ -238,10 +297,15 @@ export function ChatClient({
               value={pin}
               onChange={(e) => { setPin(e.target.value); setError(null) }}
               placeholder="Objekt-PIN"
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-center text-lg tracking-widest text-gray-900 outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] dark:border-white/10 dark:bg-[#1a1a1a] dark:text-white"
+              className="w-full rounded-xl border px-4 py-3 text-center text-lg tracking-widest outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              style={{
+                borderColor: 'var(--chat-border)',
+                backgroundColor: 'var(--chat-input-bg)',
+                color: 'var(--chat-text)',
+              }}
               autoFocus
             />
-            {error && <p className="text-center text-xs text-red-500">{error}</p>}
+            {error && <p className="text-center text-sm text-red-500">{error}</p>}
             <button
               type="submit"
               disabled={!pin.trim() || isLoading}
@@ -253,38 +317,73 @@ export function ChatClient({
           </form>
         </div>
       </div>
-    )
-  }
+    ) : null
 
-  // 4. MAIN CHAT UI (Gemini Style)
+  // Main Chat UI (when authenticated)
   const breadcrumbs = buildBreadcrumbs(asset?.location)
   const assetName = asset?.name || 'Assistent'
 
+  if (content) {
+    return (
+      <div
+        data-chat-root
+        className="flex min-h-[100dvh] w-full flex-col"
+        style={{ ...chatStyles, backgroundColor: 'var(--chat-bg)', color: 'var(--chat-text)' }}
+      >
+        <style dangerouslySetInnerHTML={{ __html: chatRootCss }} />
+        {content}
+      </div>
+    )
+  }
+
   return (
-    // font-sans forces modern look, overriding global monospace
-    <div className="flex h-[100dvh] w-full flex-col bg-white font-sans text-gray-900 dark:bg-[#0f0f0f] dark:text-gray-100">
-      
-      {/* HEADER: Minimalist, sticky */}
-      <header className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-gray-100 bg-white/80 px-4 py-3 backdrop-blur-md dark:border-white/5 dark:bg-[#0f0f0f]/80">
-        <div className="min-w-0">
-          <h1 className="truncate text-base font-semibold text-gray-900 dark:text-white">{assetName}</h1>
-          <p className="truncate text-xs text-gray-500 dark:text-gray-400">{breadcrumbs || 'Standort unbekannt'}</p>
+    <div
+      data-chat-root
+      className="flex h-[100dvh] w-full flex-col"
+      style={{ ...chatStyles, backgroundColor: 'var(--chat-bg)', color: 'var(--chat-text)' }}
+    >
+      <style dangerouslySetInnerHTML={{ __html: chatRootCss }} />
+      {/* Sticky Header (blur) */}
+      <header
+        className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b px-4 py-3 backdrop-blur-md"
+        style={{
+          borderColor: 'var(--chat-border)',
+          backgroundColor: 'var(--chat-bg-overlay)',
+        }}
+      >
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-base font-semibold" style={{ color: 'var(--chat-text)' }}>
+            {assetName}
+          </h1>
+          <p className="truncate text-xs" style={{ color: 'var(--chat-muted)' }}>
+            {breadcrumbs || 'Standort unbekannt'}
+          </p>
         </div>
-        <button onClick={() => alert('Dokumente werden geladen...')} className="rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white">
+        <button
+          type="button"
+          onClick={() => alert('Dokumente werden geladen...')}
+          className="rounded-full p-2 transition hover:opacity-80"
+          style={{ color: 'var(--chat-muted)' }}
+          aria-label="Dokumente"
+        >
           <IconDoc />
         </button>
       </header>
 
-      {/* MESSAGES AREA */}
+      {/* Scrollable messages */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-        <div className="mx-auto flex max-w-3xl flex-col gap-6">
-          {/* Welcome Message / Empty State */}
+        <div className="mx-auto flex max-w-3xl flex-col gap-5">
           {messages.length === 0 && (
-            <div className="mt-10 text-center opacity-40">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 text-gray-400 dark:bg-white/5">
+            <div className="mt-10 flex flex-col items-center text-center opacity-60">
+              <div
+                className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl"
+                style={{ backgroundColor: 'var(--chat-bubble-ai-bg)', color: 'var(--chat-muted)' }}
+              >
                 <IconBot />
               </div>
-              <p className="text-sm">Wie kann ich Ihnen bei diesem Objekt helfen?</p>
+              <p className="text-sm" style={{ color: 'var(--chat-muted)' }}>
+                Wie kann ich Ihnen bei diesem Objekt helfen?
+              </p>
             </div>
           )}
 
@@ -292,117 +391,153 @@ export function ChatClient({
             const isUser = msg.role === 'user'
             return (
               <div key={i} className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
-                {/* AI Avatar */}
                 {!isUser && (
-                  <div className="mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[var(--accent)] dark:bg-white/10">
+                  <div
+                    className="mr-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                    style={{ backgroundColor: 'var(--chat-bubble-ai-bg)', color: 'var(--chat-muted)' }}
+                  >
                     <IconBot />
                   </div>
                 )}
-                
-                {/* Message Bubble */}
                 <div
-                  className={`relative max-w-[85%] rounded-2xl px-5 py-3 text-[15px] leading-relaxed md:max-w-[75%] 
-                    ${isUser 
-                      ? 'rounded-tr-sm text-gray-900 dark:text-white' // User Text
-                      : 'rounded-tl-sm bg-transparent px-0 py-0 text-gray-800 dark:text-gray-200' // AI Text (Clean)
-                    }`}
-                  // User Bubble: Dynamic Accent color with 10% opacity
-                  style={isUser ? { backgroundColor: 'var(--accent)', opacity: 0.9 } : {}} 
+                  className={`relative max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed md:max-w-[75%] ${
+                    isUser ? 'rounded-tr-sm' : 'rounded-tl-sm'
+                  }`}
+                  style={
+                    isUser
+                      ? {
+                          backgroundColor: 'var(--chat-bubble-user-bg)',
+                          color: 'var(--chat-text)',
+                        }
+                      : {
+                          backgroundColor: 'transparent',
+                          color: 'var(--chat-text)',
+                        }
+                  }
                 >
-                  {/* For User bubbles, we need to handle the opacity trick cleanly without affecting text opacity if possible, 
-                      or just use a solid light color. 
-                      Let's use a RGBA approach if variables allow, or a simple trick: */}
-                  {isUser && (
-                     <div 
-                        className="absolute inset-0 rounded-2xl rounded-tr-sm opacity-10" 
-                        style={{ backgroundColor: 'var(--accent)' }} 
-                     />
-                  )}
-                  {/* Correcting structure: The text needs to be ABOVE the background layer if we use the layer trick. 
-                      Actually, simpler approach for "SaaS look": just use a class and override bg.
-                  */}
-                  
-                  {/* Re-doing bubble style logic for stability */}
-                   <div 
-                      className={`relative z-10 whitespace-pre-wrap ${isUser ? 'px-4 py-2 bg-[var(--accent)] bg-opacity-10 rounded-2xl rounded-tr-sm' : ''}`}
-                   >
-                     {msg.content}
-                   </div>
-
+                  <span className="whitespace-pre-wrap">{msg.content}</span>
                 </div>
               </div>
             )
           })}
-          
+
           {isLoading && (
-             <div className="flex w-full justify-start">
-               <div className="mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-white/10">
-                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-[var(--accent)]" />
-               </div>
-             </div>
+            <div className="flex w-full justify-start">
+              <div
+                className="mr-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                style={{ backgroundColor: 'var(--chat-bubble-ai-bg)' }}
+              >
+                <div
+                  className="h-4 w-4 animate-spin rounded-full border-2 border-transparent"
+                  style={{ borderTopColor: 'var(--accent)' }}
+                />
+              </div>
+              <div className="rounded-2xl rounded-tl-sm px-4 py-3" style={{ backgroundColor: 'var(--chat-bubble-ai-bg)' }}>
+                <span className="text-sm" style={{ color: 'var(--chat-muted)' }}>
+                  Denkt nach...
+                </span>
+              </div>
+            </div>
           )}
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* ERROR TOAST */}
+      {/* Error toast */}
       {error && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-red-500/90 px-4 py-2 text-sm text-white shadow-lg backdrop-blur">
+        <div
+          className="absolute bottom-28 left-1/2 z-20 -translate-x-1/2 rounded-xl px-4 py-2 text-sm text-white shadow-lg backdrop-blur-sm"
+          style={{ backgroundColor: 'rgba(239, 68, 68, 0.95)' }}
+        >
           {error}
         </div>
       )}
 
-      {/* INPUT AREA: Floating Capsule Style */}
-      <div className="shrink-0 bg-white/80 px-4 pb-6 pt-2 backdrop-blur-md dark:bg-[#0f0f0f]/80">
+      {/* Sticky input bar — Message bar style */}
+      <div
+        className="sticky bottom-0 z-10 shrink-0 border-t px-4 py-4 backdrop-blur-md"
+        style={{
+          borderColor: 'var(--chat-border)',
+          backgroundColor: 'var(--chat-bg-overlay)',
+        }}
+      >
         <div className="mx-auto max-w-3xl">
           <form
             onSubmit={handleSendSubmit}
-            className="relative flex items-end gap-2 rounded-[26px] bg-gray-100 p-2 shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-[var(--accent)]/50 dark:bg-[#1a1a1a]"
+            className="flex items-end gap-2 rounded-xl border px-3 py-2 shadow-sm transition-shadow focus-within:ring-2"
+            style={{
+              borderColor: 'var(--chat-border)',
+              backgroundColor: 'var(--chat-input-bg)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+            }}
           >
-            {/* Image Upload Button */}
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageChange}
+              aria-hidden
+            />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-white"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition hover:opacity-80"
+              style={{ color: 'var(--chat-muted)' }}
+              aria-label="Bild anhängen"
             >
               <IconAttach />
             </button>
 
-            {/* Image Preview */}
             {image && (
-              <div className="absolute bottom-full left-4 mb-2 flex items-center gap-2 rounded-xl bg-white p-2 shadow-lg dark:bg-[#222]">
-                <span className="text-xs font-medium">{image.name}</span>
-                <button type="button" onClick={() => setImage(null)} className="ml-2 text-red-500">×</button>
+              <div
+                className="absolute bottom-full left-4 mb-2 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                style={{
+                  backgroundColor: 'var(--chat-input-bg)',
+                  borderColor: 'var(--chat-border)',
+                  color: 'var(--chat-text)',
+                }}
+              >
+                <span className="max-w-[120px] truncate font-medium">{image.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setImage(null)}
+                  className="ml-1 text-red-500 hover:underline"
+                  aria-label="Bild entfernen"
+                >
+                  ×
+                </button>
               </div>
             )}
 
-            {/* Text Input */}
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Nachricht schreiben..."
-              className="max-h-32 min-h-[44px] flex-1 bg-transparent py-3 text-[15px] text-gray-900 placeholder-gray-500 outline-none dark:text-white dark:placeholder-gray-500"
+              placeholder="Nachricht..."
+              className="min-h-[44px] flex-1 bg-transparent py-2.5 text-[15px] outline-none placeholder:opacity-70"
+              style={{ color: 'var(--chat-text)' }}
               autoComplete="off"
             />
 
-            {/* Send Button */}
             <button
               type="submit"
               disabled={isLoading || (!inputValue.trim() && !image)}
-              className="flex h-10 items-center justify-center rounded-full px-4 font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-[40px]"
+              className="flex h-10 min-w-[40px] items-center justify-center gap-2 rounded-xl px-4 font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-[100px]"
               style={{ backgroundColor: 'var(--accent)' }}
             >
-              <span className="md:hidden"><IconSend /></span>
-              <span className="hidden text-sm md:block">SENDEN</span>
+              <span className="sm:hidden" aria-hidden>
+                <IconSend />
+              </span>
+              <span className="hidden sm:inline">Senden</span>
             </button>
           </form>
-          <div className="mt-2 text-center text-[10px] text-gray-400 dark:text-gray-600">
+          <p className="mt-2 text-center text-xs" style={{ color: 'var(--chat-muted)' }}>
             KI kann Fehler machen. Bitte wichtige Informationen überprüfen.
-          </div>
+          </p>
         </div>
       </div>
+
     </div>
   )
 }

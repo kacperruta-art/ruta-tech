@@ -3,7 +3,7 @@ import { defineType, defineField, defineArrayMember } from 'sanity'
 
 export const property = defineType({
   name: 'property',
-  title: 'Immobilie / Nieruchomość',
+  title: 'Immobilie',
   type: 'document',
   icon: HomeIcon,
   fieldsets: [

@@ -3,7 +3,7 @@ import { defineType, defineField } from 'sanity'
 
 export const client = defineType({
   name: 'client',
-  title: 'Klient / Firma',
+  title: 'Firma',
   type: 'document',
   icon: UsersIcon,
   fields: [
