@@ -3,27 +3,49 @@ import { structureTool } from 'sanity/structure'
 import { schema } from '@/sanity/schemaTypes'
 import { structure, defaultDocumentNode } from '@/sanity/structure'
 import { projectId, dataset } from '@/sanity/env'
+import React from 'react'
 
-// Import the logo we just created
-import { RutaLogo } from './sanity/components/RutaLogo'
+// 1. Define Logo INLINE using pure React (safe for .ts files)
+const RutaLogo = () => {
+  return React.createElement(
+    'div',
+    {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        fontFamily: "'JetBrains Mono', monospace, sans-serif",
+        fontWeight: 700,
+        fontSize: '1.2rem',
+        lineHeight: 1.2,
+        color: 'inherit',
+      },
+    },
+    [
+      React.createElement('span', { key: 'text1' }, 'RUTA'),
+      React.createElement(
+        'span',
+        {
+          key: 'sep',
+          style: { color: '#0066aa', margin: '0 4px' },
+        },
+        '//'
+      ),
+      React.createElement('span', { key: 'text2' }, 'TECH'),
+    ]
+  )
+}
 
 export default defineConfig({
   basePath: '/studio',
   name: 'Ruta_Technologies',
-  title: 'Ruta Technologies', // This text appears in browser tabs
-
+  title: 'Ruta Technologies',
   projectId,
   dataset,
-
-  plugins: [
-    structureTool({ structure, defaultDocumentNode }),
-  ],
-
+  plugins: [structureTool({ structure, defaultDocumentNode })],
   schema,
-
   studio: {
     components: {
-      logo: RutaLogo, // This replaces the text in Navbar AND Login Screen
-    }
-  }
+      logo: RutaLogo, // Updated inline component
+    },
+  },
 })
