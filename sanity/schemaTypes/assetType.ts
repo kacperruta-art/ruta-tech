@@ -1,24 +1,36 @@
 import { TagIcon } from '@sanity/icons'
-import { defineType, defineField } from 'sanity'
+import { defineType, defineField, defineArrayMember } from 'sanity'
 
 export const assetType = defineType({
   name: 'assetType',
-  title: 'Asset Type',
+  title: 'Asset Typ',
   type: 'document',
   icon: TagIcon,
   fields: [
     defineField({
-      name: 'title',
+      name: 'name',
       type: 'string',
-      title: 'Device Type Name',
+      title: 'Name',
     }),
     defineField({
-      name: 'instructions',
-      type: 'text',
-      title: 'Maintenance Instructions',
+      name: 'maintenanceInstructions',
+      type: 'array',
+      title: 'Maintenance Knowledge Base',
+      of: [defineArrayMember({ type: 'block' })],
+    }),
+    defineField({
+      name: 'manuals',
+      type: 'array',
+      title: 'Official Manuals & Schematics',
+      of: [
+        defineArrayMember({
+          type: 'file',
+          options: { accept: '.pdf,.txt,.html' },
+        }),
+      ],
     }),
   ],
   preview: {
-    select: { title: 'title' },
+    select: { name: 'name' },
   },
 })

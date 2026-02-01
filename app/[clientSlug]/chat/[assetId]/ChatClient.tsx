@@ -1,9 +1,24 @@
 'use client'
 
-import { useParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 type Message = { role: 'user' | 'assistant'; content: string }
+
+export type AssetHeaderInfo = {
+  name?: string
+  location?: {
+    name?: string
+    parentFloor?: {
+      name?: string
+      parentSection?: {
+        name?: string
+        parentProperty?: { name?: string }
+      }
+    }
+  }
+} | null
+
+type LocationInfo = NonNullable<AssetHeaderInfo>['location']
 
 const STORAGE_KEY_PREFIX = 'ruta-chat-pin'
 
@@ -20,10 +35,44 @@ function fileToBase64(file: File): Promise<string> {
   })
 }
 
-export default function ChatPage() {
-  const params = useParams()
-  const assetId = params.assetId as string
+function buildBreadcrumbs(location: LocationInfo): string {
+  if (!location) return ''
+  const propertyName = location.parentFloor?.parentSection?.parentProperty?.name
+  const sectionName = location.parentFloor?.parentSection?.name
+  const unitName = location.name
+  return [propertyName, sectionName, unitName].filter(Boolean).join(' • ')
+}
 
+function DocumentIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+    >
+      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <line x1="10" y1="9" x2="8" y2="9" />
+    </svg>
+  )
+}
+
+export function ChatClient({
+  clientSlug,
+  assetId,
+  asset,
+}: {
+  clientSlug: string
+  assetId: string
+  asset: AssetHeaderInfo
+}) {
   const [pin, setPin] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [hasCheckedStorage, setHasCheckedStorage] = useState(false)
@@ -36,7 +85,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const storageKey = `${STORAGE_KEY_PREFIX}-${assetId}`
+  const storageKey = `${STORAGE_KEY_PREFIX}-${clientSlug}-${assetId}`
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -113,7 +162,7 @@ export default function ChatPage() {
 
         const userContent = [message.trim(), imageFile && '[Image attached]']
           .filter(Boolean)
-          .join(' ') || '[Image]'
+          .join(' ') || '[Image only]'
 
         setMessages((prev) => [
           ...prev,
@@ -152,17 +201,21 @@ export default function ChatPage() {
     e.target.value = ''
   }
 
+  const handleDocumentsClick = () => {
+    alert('Manuals available')
+  }
+
   if (!hasCheckedStorage) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-zinc-950">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-600 border-t-zinc-400" />
+      <div className="flex min-h-dvh items-center justify-center bg-gray-50">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600" />
       </div>
     )
   }
 
   if (!assetId) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-zinc-950 text-zinc-400">
+      <div className="flex min-h-dvh items-center justify-center bg-gray-50 text-gray-600">
         Invalid asset
       </div>
     )
@@ -170,14 +223,14 @@ export default function ChatPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center bg-zinc-950 px-6">
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-gray-50 px-6">
         <div className="w-full max-w-sm space-y-6">
           <div className="text-center">
-            <h1 className="text-xl font-semibold text-zinc-100">
+            <h1 className="text-xl font-semibold text-gray-900">
               Technician Access
             </h1>
-            <p className="mt-2 text-sm text-zinc-500">
-              Enter the access PIN for this asset
+            <p className="mt-2 text-sm text-gray-600">
+              Enter the property PIN for this asset
             </p>
           </div>
 
@@ -189,18 +242,18 @@ export default function ChatPage() {
                 setPin(e.target.value)
                 setError(null)
               }}
-              placeholder="PIN"
+              placeholder="Enter Property PIN"
               autoComplete="off"
               autoFocus
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-4 py-3 text-zinc-100 placeholder-zinc-500 outline-none transition focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500"
+              className="w-full rounded-xl bg-gray-100 px-4 py-3 text-gray-900 placeholder-gray-500 outline-none transition focus:ring-2 focus:ring-blue-500/20"
             />
             {error && (
-              <p className="text-center text-sm text-red-400">{error}</p>
+              <p className="text-center text-sm text-red-500">{error}</p>
             )}
             <button
               type="submit"
               disabled={!pin.trim() || isLoading}
-              className="w-full rounded-lg bg-zinc-100 py-3 font-medium text-zinc-900 transition hover:bg-zinc-200 disabled:opacity-50 disabled:hover:bg-zinc-100"
+              className="w-full rounded-xl bg-blue-600 py-3 font-medium text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600"
             >
               {isLoading ? 'Verifying…' : 'Enter'}
             </button>
@@ -210,12 +263,32 @@ export default function ChatPage() {
     )
   }
 
+  const breadcrumbs = buildBreadcrumbs(asset?.location)
+  const assetName = asset?.name || 'Maintenance Assistant'
+
   return (
-    <div className="flex min-h-dvh flex-col bg-zinc-950 text-zinc-100">
-      <header className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-900/95 px-4 py-3 backdrop-blur">
-        <h1 className="text-center text-base font-medium text-zinc-100">
-          Maintenance Assistant
-        </h1>
+    <div className="flex min-h-dvh flex-col bg-gray-50 text-gray-900">
+      <header className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 py-3">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg font-bold text-gray-900">{assetName}</h1>
+            {breadcrumbs ? (
+              <p className="mt-0.5 truncate text-xs text-gray-500">
+                {breadcrumbs}
+              </p>
+            ) : (
+              <p className="mt-0.5 text-xs text-gray-400">Location unknown</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleDocumentsClick}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition hover:bg-gray-200 hover:text-gray-800"
+            aria-label="Documents / Manuals"
+          >
+            <DocumentIcon />
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto px-4 py-6">
@@ -228,8 +301,8 @@ export default function ChatPage() {
               <div
                 className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
                   msg.role === 'user'
-                    ? 'bg-zinc-700 text-zinc-100'
-                    : 'bg-zinc-800 text-zinc-200'
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-gray-200 bg-white text-gray-800 shadow-sm'
                 }`}
               >
                 <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
@@ -238,10 +311,10 @@ export default function ChatPage() {
           ))}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="rounded-2xl bg-zinc-800 px-4 py-2.5">
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-zinc-500" />
-                <span className="ml-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-zinc-500 [animation-delay:150ms]" />
-                <span className="ml-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-zinc-500 [animation-delay:300ms]" />
+              <div className="rounded-2xl border border-gray-200 bg-white px-4 py-2.5 shadow-sm">
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue-600" />
+                <span className="ml-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-blue-600 [animation-delay:150ms]" />
+                <span className="ml-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-blue-600 [animation-delay:300ms]" />
               </div>
             </div>
           )}
@@ -250,12 +323,12 @@ export default function ChatPage() {
       </div>
 
       {error && (
-        <div className="px-4 py-2 text-center text-sm text-red-400">{error}</div>
+        <div className="px-4 py-2 text-center text-sm text-red-500">{error}</div>
       )}
 
       <form
         onSubmit={handleSendSubmit}
-        className="sticky bottom-0 border-t border-zinc-800 bg-zinc-950 px-4 py-3"
+        className="sticky bottom-0 border-t border-gray-200 bg-white px-4 py-3"
       >
         <div className="mx-auto flex max-w-2xl items-end gap-2">
           <input
@@ -269,7 +342,7 @@ export default function ChatPage() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-zinc-400 transition hover:bg-zinc-700 hover:text-zinc-300"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition hover:bg-gray-200 hover:text-gray-800"
             aria-label="Attach image"
           >
             <svg
@@ -287,14 +360,14 @@ export default function ChatPage() {
             </svg>
           </button>
 
-          <div className="flex min-h-10 flex-1 flex-wrap items-end gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2">
+          <div className="flex min-h-10 flex-1 flex-wrap items-end gap-2 rounded-xl bg-gray-100 px-3 py-2">
             {image && (
-              <span className="flex items-center gap-1 rounded-full bg-zinc-700 px-2 py-0.5 text-xs text-zinc-300">
+              <span className="flex items-center gap-1 rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700">
                 {image.name}
                 <button
                   type="button"
                   onClick={() => setImage(null)}
-                  className="rounded-full p-0.5 hover:bg-zinc-600"
+                  className="rounded-full p-0.5 hover:bg-gray-300"
                   aria-label="Remove image"
                 >
                   ×
@@ -306,14 +379,14 @@ export default function ChatPage() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Message…"
-              className="min-w-0 flex-1 bg-transparent text-sm text-zinc-100 placeholder-zinc-500 outline-none"
+              className="min-w-0 flex-1 bg-transparent text-sm text-gray-900 placeholder-gray-500 outline-none"
             />
           </div>
 
           <button
             type="submit"
             disabled={isLoading || (!inputValue.trim() && !image)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-900 transition hover:bg-zinc-200 disabled:opacity-50 disabled:hover:bg-zinc-100"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600"
             aria-label="Send"
           >
             <svg
