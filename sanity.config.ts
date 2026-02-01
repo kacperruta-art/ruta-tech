@@ -1,11 +1,12 @@
 import { defineConfig } from 'sanity'
 import { structureTool } from 'sanity/structure'
-// visionTool removed for a clean interface for end users
 
 import { schema } from '@/sanity/schemaTypes'
 import { structure, defaultDocumentNode } from '@/sanity/structure'
 import { projectId, dataset } from '@/sanity/env'
-import { Logo } from '@/sanity/components/Logo'
+
+// Import the custom logo component
+import { RutaLogo } from '@/sanity/components/RutaLogo'
 
 export default defineConfig({
   basePath: '/studio',
@@ -14,12 +15,11 @@ export default defineConfig({
   dataset,
   plugins: [
     structureTool({ structure, defaultDocumentNode }),
-    // visionTool(),
   ],
   schema,
   studio: {
     components: {
-      logo: Logo,
+      logo: RutaLogo,
     },
   },
 })
