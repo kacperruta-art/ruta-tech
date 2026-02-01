@@ -9,7 +9,7 @@ import type { UserViewComponent } from 'sanity/structure'
 import { apiVersion } from '@/sanity/env'
 
 const BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'https://ruta-tech.ch'
+  process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
 
 const ASSETS_QUERY = `*[_type == "asset" && defined(location) && (location->parentFloor->parentSection->parentProperty._ref == $id || location->parentFloor->parentSection->parentProperty._ref == $baseId)] | order(name asc) {
   _id,
