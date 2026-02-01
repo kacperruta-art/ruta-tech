@@ -275,15 +275,16 @@ export function ChatClient({
         Objekt nicht gefunden
       </div>
     ) : !isAuthenticated ? (
-      <div className="flex flex-1 items-center justify-center px-4" style={{ color: 'var(--chat-text)' }}>
+      <div className="flex flex-1 items-center justify-center px-4 sm:px-6" style={{ color: 'var(--chat-text)' }}>
         <div
-          className="w-full max-w-sm overflow-hidden rounded-2xl p-8 shadow-lg"
+          className="w-full max-w-sm overflow-hidden rounded-2xl p-8 shadow-lg border border-gray-100 dark:border-white/5"
           style={{
             backgroundColor: 'var(--chat-card-bg)',
-            border: '1px solid var(--chat-border)',
           }}
         >
-          <div className="mb-8 text-center">
+          <div className="mb-8 flex flex-col items-center text-center">
+            {/* LOGO: Uses favicon.ico */}
+            <img src="/favicon.ico" alt="Logo" className="mb-6 h-16 w-16 shrink-0 rounded-xl object-contain opacity-90" />
             <h1 className="text-2xl font-semibold" style={{ color: 'var(--chat-text)' }}>
               Zugriffsberechtigung
             </h1>
@@ -343,35 +344,37 @@ export function ChatClient({
       style={{ ...chatStyles, backgroundColor: 'var(--chat-bg)', color: 'var(--chat-text)' }}
     >
       <style dangerouslySetInnerHTML={{ __html: chatRootCss }} />
-      {/* Sticky Header (blur) */}
+      {/* Sticky Header (blur) — container pattern */}
       <header
-        className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b px-4 py-3 backdrop-blur-md"
-        style={{
-          borderColor: 'var(--chat-border)',
-          backgroundColor: 'var(--chat-bg-overlay)',
-        }}
+        className="sticky top-0 z-10 shrink-0 border-b border-gray-100 py-3 backdrop-blur-md dark:border-white/5"
+        style={{ backgroundColor: 'var(--chat-bg-overlay)' }}
       >
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate text-base font-semibold" style={{ color: 'var(--chat-text)' }}>
-            {assetName}
-          </h1>
-          <p className="truncate text-xs" style={{ color: 'var(--chat-muted)' }}>
-            {breadcrumbs || 'Standort unbekannt'}
-          </p>
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <img src="/favicon.ico" alt="Logo" className="h-8 w-8 shrink-0 rounded-lg object-contain opacity-90" />
+            <div className="min-w-0">
+              <h1 className="truncate text-base font-semibold" style={{ color: 'var(--chat-text)' }}>
+                {assetName}
+              </h1>
+              <p className="truncate text-xs" style={{ color: 'var(--chat-muted)' }}>
+                {breadcrumbs || 'Standort unbekannt'}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => alert('Dokumente werden geladen...')}
+            className="shrink-0 rounded-full p-2 transition hover:opacity-80"
+            style={{ color: 'var(--chat-muted)' }}
+            aria-label="Dokumente"
+          >
+            <IconDoc />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => alert('Dokumente werden geladen...')}
-          className="rounded-full p-2 transition hover:opacity-80"
-          style={{ color: 'var(--chat-muted)' }}
-          aria-label="Dokumente"
-        >
-          <IconDoc />
-        </button>
       </header>
 
-      {/* Scrollable messages */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+      {/* Scrollable messages — container pattern */}
+      <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
         <div className="mx-auto flex max-w-3xl flex-col gap-5">
           {messages.length === 0 && (
             <div className="mt-10 flex flex-col items-center text-center opacity-60">
@@ -453,21 +456,16 @@ export function ChatClient({
         </div>
       )}
 
-      {/* Sticky input bar — Message bar style */}
+      {/* Sticky input bar — container pattern, floats above bottom */}
       <div
-        className="sticky bottom-0 z-10 shrink-0 border-t px-4 py-4 backdrop-blur-md"
-        style={{
-          borderColor: 'var(--chat-border)',
-          backgroundColor: 'var(--chat-bg-overlay)',
-        }}
+        className="sticky bottom-0 z-10 shrink-0 border-t border-gray-100 px-4 pb-5 pt-4 backdrop-blur-md dark:border-white/5"
+        style={{ backgroundColor: 'var(--chat-bg-overlay)' }}
       >
         <div className="mx-auto max-w-3xl">
           <form
             onSubmit={handleSendSubmit}
-            className="flex items-end gap-2 rounded-xl border px-3 py-2 shadow-sm transition-shadow focus-within:ring-2"
+            className="flex items-end gap-2 rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-sm transition-shadow focus-within:ring-2 focus-within:ring-[var(--accent)]/30 dark:border-white/5 dark:bg-white/5"
             style={{
-              borderColor: 'var(--chat-border)',
-              backgroundColor: 'var(--chat-input-bg)',
               boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
             }}
           >
@@ -491,10 +489,9 @@ export function ChatClient({
 
             {image && (
               <div
-                className="absolute bottom-full left-4 mb-2 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                className="absolute bottom-full left-4 mb-2 flex items-center gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm dark:border-white/5"
                 style={{
                   backgroundColor: 'var(--chat-input-bg)',
-                  borderColor: 'var(--chat-border)',
                   color: 'var(--chat-text)',
                 }}
               >
