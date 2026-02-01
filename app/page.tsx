@@ -9,6 +9,26 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // Translations dictionary as required
+  const translations = {
+    DE: {
+      brandSub: "Facility Management System",
+      emailLabel: "> E-MAIL",
+      passwordLabel: "> PASSWORT",
+      btnLogin: "ANMELDEN",
+      btnLoading: "VERBINDUNG...",
+      backLink: "← Zur Hauptseite",
+    },
+    EN: {
+      brandSub: "Facility Management System",
+      emailLabel: "> E-MAIL",
+      passwordLabel: "> PASSWORD",
+      btnLogin: "LOGIN",
+      btnLoading: "CONNECTING...",
+      backLink: "← Back to Home",
+    }
+  };
+
   // Handle theme toggle
   const handleThemeToggle = () => {
     setIsDark((prev) => {
@@ -24,7 +44,7 @@ export default function LoginPage() {
     });
   };
 
-  // Language switcher UI only (no text changes)
+  // Language switcher
   const handleLangSwitch = (lang: "DE" | "EN") => setLanguage(lang);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -36,6 +56,9 @@ export default function LoginPage() {
       router.push("/studio");
     }, 1500);
   };
+
+  // Short alias for current language
+  const t = translations;
 
   return (
     <div className="wrapper">
@@ -97,10 +120,10 @@ export default function LoginPage() {
           <div className="login-brand">
             RUTA<span className="highlight">//</span>TECH
           </div>
-          <div className="login-sub">immo.ruta-tech.ch</div>
+          <div className="login-sub">{t[language].brandSub}</div>
           <form id="loginForm" autoComplete="on" onSubmit={handleSubmit}>
             <div className="input-group">
-              <label htmlFor="email">&gt; E-MAIL</label>
+              <label htmlFor="email">{t[language].emailLabel}</label>
               <input
                 type="email"
                 name="email"
@@ -113,7 +136,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="input-group">
-              <label htmlFor="password">&gt; PASSWORT</label>
+              <label htmlFor="password">{t[language].passwordLabel}</label>
               <input
                 type="password"
                 name="password"
@@ -129,17 +152,17 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <span className="blink" style={{ marginRight: 6, color: "#04f" }}>●</span>
-                  VERBINDUNG...
+                  {t[language].btnLoading}
                 </>
               ) : (
                 <>
-                  <span className="bracket">[</span> ANMELDEN <span className="bracket">]</span>
+                  <span className="bracket">[</span> {t[language].btnLogin} <span className="bracket">]</span>
                 </>
               )}
             </button>
           </form>
           <p className="login-back" style={{ marginTop: 28 }}>
-            <a href="/">← Zur Hauptseite</a>
+            <a href="/">{t[language].backLink}</a>
           </p>
         </div>
       </main>
