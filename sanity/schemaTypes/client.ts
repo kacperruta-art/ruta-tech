@@ -83,6 +83,23 @@ export const client = defineType({
     { name: 'team', title: 'Zuständigkeiten & Team', icon: UsersIcon },
     { name: 'docs', title: 'Dokumente', icon: DocumentIcon },
   ],
+  fieldsets: [
+    {
+      name: 'branding',
+      title: 'Branding',
+      options: { columns: 2 },
+    },
+    {
+      name: 'location',
+      title: 'Standort',
+      options: { columns: 2 },
+    },
+    {
+      name: 'communication',
+      title: 'Kommunikation',
+      options: { columns: 2 },
+    },
+  ],
   fields: [
     // --- Group: details ---
     defineField({
@@ -104,6 +121,7 @@ export const client = defineType({
       type: 'image',
       title: 'Logo',
       group: 'details',
+      fieldset: 'branding',
     }),
     defineField({
       name: 'primaryColor',
@@ -111,6 +129,11 @@ export const client = defineType({
       title: 'Hauptfarbe (Hex)',
       description: 'z.B. #0066aa',
       group: 'details',
+      fieldset: 'branding',
+      validation: (rule) =>
+        rule
+          .regex(/^#[0-9A-Fa-f]{6}$/, { name: 'hexColor', invert: false })
+          .error('Bitte Hex-Code im Format #RRGGBB angeben'),
     }),
     defineField({
       name: 'description',
@@ -132,18 +155,28 @@ export const client = defineType({
       type: 'string',
       title: 'PLZ & Ort',
       group: 'contact',
+      fieldset: 'location',
+    }),
+    defineField({
+      name: 'country',
+      type: 'string',
+      title: 'Land',
+      group: 'contact',
+      fieldset: 'location',
     }),
     defineField({
       name: 'email',
       type: 'string',
       title: 'Allgemeine E-Mail',
       group: 'contact',
+      fieldset: 'communication',
     }),
     defineField({
       name: 'phone',
       type: 'string',
       title: 'Hauptnummer',
       group: 'contact',
+      fieldset: 'communication',
     }),
     defineField({
       name: 'website',
@@ -157,6 +190,10 @@ export const client = defineType({
       title: 'UID-Nummer',
       description: 'z.B. CHE-123.456.789',
       group: 'contact',
+      validation: (rule) =>
+        rule
+          .regex(/^CHE-\d{3}\.\d{3}\.\d{3}$/, { name: 'swissUid', invert: false })
+          .error('Bitte UID im Format CHE-123.456.789 angeben'),
     }),
     // --- Group: team ---
     defineField({
@@ -179,13 +216,14 @@ export const client = defineType({
   preview: {
     select: {
       name: 'name',
-      zipCity: 'zipCity',
+      slug: 'slug.current',
       logo: 'logo',
     },
-    prepare({ name, zipCity, logo }) {
+    prepare({ name, slug, logo }) {
+      const url = slug ? `https://ruta.tech/${slug}` : 'https://ruta.tech'
       return {
         title: name || 'Unbenannt',
-        subtitle: zipCity || 'Keine Adresse',
+        subtitle: url,
         media: logo,
       }
     },
