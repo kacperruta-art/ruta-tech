@@ -1,24 +1,25 @@
 import {
   HomeIcon,
-  ControlsIcon,
-  ImagesIcon,
-  InfoOutlineIcon as infoIcon,
   ThListIcon,
   DocumentIcon,
-  WarningOutlineIcon,
+  NumberIcon,
+  ArrowRightIcon,
+  UsersIcon,
+  DatabaseIcon,
 } from '@sanity/icons'
 import { defineType, defineField, defineArrayMember } from 'sanity'
 
-const buildingSectionTypeOptions = [
-  { title: 'Eingang', value: 'Entrance' },
-  { title: 'Treppenhaus', value: 'Staircase' },
-  { title: 'Etage', value: 'Floor' },
-  { title: 'Liftschacht', value: 'ElevatorShaft' },
+const usageUnitTypeOptions = [
+  { title: 'Wohnung', value: 'Apartment' },
+  { title: 'Büro', value: 'Office' },
+  { title: 'Laden', value: 'Retail' },
+]
+
+const commonAreaTypeOptions = [
   { title: 'Waschküche', value: 'Laundry' },
-  { title: 'Technikraum', value: 'TechnicalRoom' },
-  { title: 'Garage', value: 'Garage' },
-  { title: 'Aussenbereich', value: 'Outdoor' },
-  { title: 'Gemeinschaftsbereich', value: 'CommonArea' },
+  { title: 'Gang', value: 'Corridor' },
+  { title: 'Technik', value: 'Technical' },
+  { title: 'Lager', value: 'Storage' },
 ]
 
 const buildingCertificateTypeOptions = [
@@ -38,13 +39,14 @@ const heatingTypeOptions = [
 const typeTitleMap = (options: { title: string; value: string }[]) =>
   new Map(options.map((option) => [option.value, option.title]))
 
-const buildingSectionTypeTitles = typeTitleMap(buildingSectionTypeOptions)
+const usageUnitTypeTitles = typeTitleMap(usageUnitTypeOptions)
+const commonAreaTypeTitles = typeTitleMap(commonAreaTypeOptions)
 
 const managerEntry = defineArrayMember({
   type: 'object',
   name: 'managerEntry',
   title: 'Kontakt',
-  icon: infoIcon,
+  icon: UsersIcon,
   fields: [
     defineField({
       name: 'kind',
@@ -106,9 +108,44 @@ const managerEntry = defineArrayMember({
   },
 })
 
-export const buildingSection = defineType({
-  name: 'buildingSection',
-  title: 'Gebäudeteil',
+export const usageUnit = defineType({
+  name: 'usageUnit',
+  title: 'Mietobjekt',
+  type: 'object',
+  icon: DocumentIcon,
+  fields: [
+    defineField({
+      name: 'name',
+      type: 'string',
+      title: 'Bezeichnung',
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'type',
+      type: 'string',
+      title: 'Nutzung',
+      options: { list: usageUnitTypeOptions },
+    }),
+    defineField({
+      name: 'tenantName',
+      type: 'string',
+      title: 'Mieter',
+    }),
+  ],
+  preview: {
+    select: { name: 'name', type: 'type' },
+    prepare({ name, type }) {
+      return {
+        title: name || 'Unbenannt',
+        subtitle: type ? usageUnitTypeTitles.get(type) : undefined,
+      }
+    },
+  },
+})
+
+export const commonArea = defineType({
+  name: 'commonArea',
+  title: 'Allgemeiner Bereich',
   type: 'object',
   icon: ThListIcon,
   fields: [
@@ -121,25 +158,8 @@ export const buildingSection = defineType({
     defineField({
       name: 'type',
       type: 'string',
-      title: 'Typ',
-      options: { list: buildingSectionTypeOptions },
-    }),
-    defineField({
-      name: 'floor',
-      type: 'string',
-      title: 'Etage / Ebene',
-    }),
-    defineField({
-      name: 'accessInfo',
-      type: 'text',
-      title: 'Zugang / Hinweise',
-      rows: 3,
-    }),
-    defineField({
-      name: 'qrEnabled',
-      type: 'boolean',
-      title: 'QR aktiviert',
-      initialValue: true,
+      title: 'Kategorie',
+      options: { list: commonAreaTypeOptions },
     }),
   ],
   preview: {
@@ -147,7 +167,109 @@ export const buildingSection = defineType({
     prepare({ name, type }) {
       return {
         title: name || 'Unbenannt',
-        subtitle: type ? buildingSectionTypeTitles.get(type) : undefined,
+        subtitle: type ? commonAreaTypeTitles.get(type) : undefined,
+      }
+    },
+  },
+})
+
+export const floor = defineType({
+  name: 'floor',
+  title: 'Stockwerk',
+  type: 'object',
+  icon: NumberIcon,
+  fields: [
+    defineField({
+      name: 'name',
+      type: 'string',
+      title: 'Bezeichnung',
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'level',
+      type: 'number',
+      title: 'Ebene (Sortierung)',
+    }),
+    defineField({
+      name: 'units',
+      type: 'array',
+      title: 'Mietobjekte / Wohnungen',
+      of: [defineArrayMember({ type: 'usageUnit' })],
+    }),
+    defineField({
+      name: 'commonAreas',
+      type: 'array',
+      title: 'Allgemeine Bereiche (Gang, WC, etc.)',
+      of: [defineArrayMember({ type: 'commonArea' })],
+    }),
+  ],
+  preview: {
+    select: { name: 'name', units: 'units' },
+    prepare({ name, units }) {
+      const count = Array.isArray(units) ? units.length : 0
+      return {
+        title: name || 'Unbenannt',
+        subtitle: `${count} Mietobjekt${count === 1 ? '' : 'e'}`,
+      }
+    },
+  },
+})
+
+export const zoneItem = defineType({
+  name: 'zoneItem',
+  title: 'Zonenplatz',
+  type: 'object',
+  icon: ArrowRightIcon,
+  fields: [
+    defineField({
+      name: 'name',
+      type: 'string',
+      title: 'Bezeichnung',
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'type',
+      type: 'string',
+      title: 'Typ',
+    }),
+  ],
+  preview: {
+    select: { name: 'name', type: 'type' },
+    prepare({ name, type }) {
+      return {
+        title: name || 'Unbenannt',
+        subtitle: type || undefined,
+      }
+    },
+  },
+})
+
+export const zone = defineType({
+  name: 'zone',
+  title: 'Zone',
+  type: 'object',
+  icon: DatabaseIcon,
+  fields: [
+    defineField({
+      name: 'name',
+      type: 'string',
+      title: 'Bezeichnung',
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'items',
+      type: 'array',
+      title: 'Plätze / Räume',
+      of: [defineArrayMember({ type: 'zoneItem' })],
+    }),
+  ],
+  preview: {
+    select: { name: 'name', items: 'items' },
+    prepare({ name, items }) {
+      const count = Array.isArray(items) ? items.length : 0
+      return {
+        title: name || 'Unbenannt',
+        subtitle: `${count} Eintrag${count === 1 ? '' : 'e'}`,
       }
     },
   },
@@ -189,11 +311,10 @@ export const building = defineType({
   type: 'document',
   icon: HomeIcon,
   groups: [
-    { name: 'basis', title: 'Basisdaten', default: true, icon: infoIcon },
-    { name: 'dna', title: 'Technisches DNA', icon: ControlsIcon },
-    { name: 'structure', title: 'Gebäudeteile', icon: ThListIcon },
-    { name: 'compliance', title: 'Dokumente & Zertifikate', icon: DocumentIcon },
-    { name: 'dashboard', title: 'Dashboard', icon: WarningOutlineIcon },
+    { name: 'basis', title: 'Basisdaten', default: true, icon: HomeIcon },
+    { name: 'structure', title: 'Struktur', icon: ThListIcon },
+    { name: 'dna', title: 'Technische Daten', icon: DatabaseIcon },
+    { name: 'docs', title: 'Dokumente', icon: DocumentIcon },
   ],
   fieldsets: [
     { name: 'address', title: 'Adresse', options: { columns: 2 } },
@@ -234,11 +355,18 @@ export const building = defineType({
       validation: (rule) => rule.max(1),
     }),
     defineField({
+      name: 'pin',
+      type: 'string',
+      title: 'Zugangs-PIN (Chat)',
+      description: '4-stellig, z.B. 1410. Wird für den Zugang zum Chat benötigt.',
+      group: 'basis',
+      validation: (Rule) => Rule.min(4).max(6).regex(/^\d+$/, { name: 'numbers' }),
+    }),
+    defineField({
       name: 'mainImage',
       type: 'image',
-      title: 'Titelbild',
+      title: 'Bild',
       group: 'basis',
-      icon: ImagesIcon,
       options: { hotspot: true },
     }),
     defineField({
@@ -269,6 +397,21 @@ export const building = defineType({
       group: 'basis',
       fieldset: 'address',
       initialValue: 'Schweiz',
+    }),
+    // --- Group: structure ---
+    defineField({
+      name: 'floors',
+      type: 'array',
+      title: 'Stockwerke',
+      group: 'structure',
+      of: [defineArrayMember({ type: 'floor' })],
+    }),
+    defineField({
+      name: 'zones',
+      type: 'array',
+      title: 'Zonen',
+      group: 'structure',
+      of: [defineArrayMember({ type: 'zone' })],
     }),
     // --- Group: dna ---
     defineField({
@@ -308,14 +451,14 @@ export const building = defineType({
       fieldset: 'stats',
     }),
     defineField({
-      name: 'floors',
+      name: 'floorsCount',
       type: 'number',
       title: 'Anzahl Etagen',
       group: 'dna',
       fieldset: 'stats',
     }),
     defineField({
-      name: 'units',
+      name: 'unitsCount',
       type: 'number',
       title: 'Anzahl Einheiten',
       group: 'dna',
@@ -329,21 +472,12 @@ export const building = defineType({
       group: 'dna',
       rows: 4,
     }),
-    // --- Group: structure ---
-    defineField({
-      name: 'locations',
-      type: 'array',
-      title: 'Gebäudeteile / Locations',
-      description: 'Physisches Layout, z.B. Waschküche A oder Tiefgarage -1.',
-      group: 'structure',
-      of: [defineArrayMember({ type: 'buildingSection' })],
-    }),
-    // --- Group: compliance ---
+    // --- Group: docs ---
     defineField({
       name: 'certificates',
       type: 'array',
       title: 'Zertifikate',
-      group: 'compliance',
+      group: 'docs',
       of: [defineArrayMember({ type: 'buildingCertificate' })],
     }),
     defineField({
@@ -351,21 +485,13 @@ export const building = defineType({
       type: 'array',
       title: 'Statische Dokumente',
       description: 'Pläne, Verträge, allgemeine Unterlagen.',
-      group: 'compliance',
+      group: 'docs',
       of: [
         defineArrayMember({
           type: 'file',
           options: { accept: '.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg' },
         }),
       ],
-    }),
-    // --- Group: dashboard ---
-    defineField({
-      name: 'statusNote',
-      type: 'string',
-      title: 'Statushinweis',
-      description: 'Manuelle Hinweise für das Dashboard (Live-Daten kommen aus Queries).',
-      group: 'dashboard',
     }),
   ],
   preview: {
@@ -383,7 +509,7 @@ export const building = defineType({
       return {
         title: name || 'Unbenannt',
         subtitle: subtitle || undefined,
-        media: mainImage,
+        media: mainImage || HomeIcon,
       }
     },
   },

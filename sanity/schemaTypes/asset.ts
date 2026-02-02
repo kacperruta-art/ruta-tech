@@ -1,108 +1,178 @@
-import { CubeIcon } from '@sanity/icons'
+import {
+  ComponentIcon,
+  PinIcon,
+  CodeIcon as BarcodeIcon,
+  CalendarIcon,
+  CheckmarkCircleIcon,
+  WarningOutlineIcon,
+} from '@sanity/icons'
 import { defineType, defineField, defineArrayMember } from 'sanity'
 
-const serviceHistoryEntry = defineArrayMember({
-  type: 'object',
-  name: 'serviceHistoryEntry',
-  fields: [
-    defineField({
-      name: 'date',
-      type: 'date',
-      title: 'Date',
-      validation: (rule) => rule.required(),
-      initialValue: () => new Date().toISOString().split('T')[0],
-    }),
-    defineField({
-      name: 'type',
-      type: 'string',
-      title: 'Type',
-      options: {
-        list: [
-          { title: 'Maintenance', value: 'Maintenance' },
-          { title: 'Repair', value: 'Repair' },
-          { title: 'Inspection', value: 'Inspection' },
-          { title: 'Installation', value: 'Installation' },
-        ],
-      },
-    }),
-    defineField({
-      name: 'technician',
-      type: 'string',
-      title: 'Technician',
-    }),
-    defineField({
-      name: 'description',
-      type: 'text',
-      title: 'Description',
-    }),
-    defineField({
-      name: 'notes',
-      type: 'text',
-      title: 'Notes',
-      hidden: true,
-    }),
-  ],
-  preview: {
-    select: { date: 'date', type: 'type', description: 'description' },
-    prepare({ date, type, description }) {
-      return {
-        title: [date, type].filter(Boolean).join(' – '),
-        subtitle: description ? description.slice(0, 50) + (description.length > 50 ? '…' : '') : undefined,
-      }
-    },
-  },
-})
+const assetTypeOptions = [
+  { title: 'Heizung', value: 'Heating' },
+  { title: 'Lüftung', value: 'Ventilation' },
+  { title: 'Sanitär', value: 'Sanitary' },
+  { title: 'Aufzug', value: 'Elevator' },
+  { title: 'Elektro', value: 'Electrical' },
+  { title: 'Waschraum-Gerät', value: 'Appliance' },
+  { title: 'Türen / Tore', value: 'DoorGate' },
+  { title: 'Sicherheit', value: 'Safety' },
+  { title: 'Sonstiges', value: 'Other' },
+]
+
+const statusOptions = [
+  { title: 'Aktiv', value: 'active' },
+  { title: 'Wartung', value: 'maintenance' },
+  { title: 'Defekt', value: 'defect' },
+  { title: 'Inaktiv', value: 'inactive' },
+]
 
 export const asset = defineType({
   name: 'asset',
-  title: 'Asset',
+  title: 'Anlage / Gerät',
   type: 'document',
-  icon: CubeIcon,
+  icon: ComponentIcon,
+  groups: [
+    { name: 'basis', title: 'Basisdaten', default: true, icon: BarcodeIcon },
+    { name: 'location', title: 'Standort', icon: PinIcon },
+    { name: 'tech', title: 'Technik & Specs', icon: ComponentIcon },
+    { name: 'service', title: 'Service & Garantie', icon: CalendarIcon },
+    { name: 'docs', title: 'Dokumente', icon: CheckmarkCircleIcon },
+  ],
+  fieldsets: [
+    { name: 'techDetails', title: 'Technische Daten', options: { columns: 2 } },
+  ],
   fields: [
+    // --- Group: basis ---
     defineField({
       name: 'name',
       type: 'string',
-      title: 'Name',
+      title: 'Bezeichnung',
+      group: 'basis',
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'slug',
+      type: 'slug',
+      title: 'Slug',
+      group: 'basis',
+      options: { source: 'name', maxLength: 96 },
+    }),
+    defineField({
+      name: 'assetType',
+      type: 'string',
+      title: 'Kategorie',
+      group: 'basis',
+      options: { list: assetTypeOptions },
+    }),
+    defineField({
+      name: 'status',
+      type: 'string',
+      title: 'Status',
+      group: 'basis',
+      options: { list: statusOptions },
+      initialValue: 'active',
+    }),
+    defineField({
+      name: 'mainImage',
+      type: 'image',
+      title: 'Titelbild',
+      group: 'basis',
+      options: { hotspot: true },
+    }),
+    // --- Group: location ---
+    defineField({
+      name: 'building',
+      type: 'reference',
+      to: [{ type: 'building' }],
+      title: 'Gebäude',
+      group: 'location',
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'locationName',
+      type: 'string',
+      title: 'Gebäudeteil / Standort',
+      description:
+        "Name of the section defined in the Building (e.g. 'Waschküche A').",
+      group: 'location',
+    }),
+    defineField({
+      name: 'coordinates',
+      type: 'string',
+      title: 'Koordinaten / Etage genau',
+      group: 'location',
+    }),
+    // --- Group: tech ---
+    defineField({
+      name: 'manufacturer',
+      type: 'string',
+      title: 'Hersteller',
+      group: 'tech',
+      fieldset: 'techDetails',
+    }),
+    defineField({
+      name: 'model',
+      type: 'string',
+      title: 'Modell / Typ',
+      group: 'tech',
+      fieldset: 'techDetails',
     }),
     defineField({
       name: 'serialNumber',
       type: 'string',
-      title: 'Serial Number',
+      title: 'Seriennummer',
+      group: 'tech',
+      fieldset: 'techDetails',
     }),
     defineField({
-      name: 'publicId',
-      type: 'slug',
-      title: 'QR Code ID',
-      options: {
-        source: 'name',
-      },
+      name: 'installDate',
+      type: 'date',
+      title: 'Installationsdatum',
+      group: 'tech',
+      fieldset: 'techDetails',
+    }),
+    // --- Group: service ---
+    defineField({
+      name: 'serviceProviderName',
+      type: 'string',
+      title: 'Service Partner Name',
+      group: 'service',
     }),
     defineField({
-      name: 'type',
-      type: 'reference',
-      to: [{ type: 'assetType' }],
-      title: 'Type',
+      name: 'serviceProviderContact',
+      type: 'string',
+      title: 'Telefon / E-Mail',
+      group: 'service',
     }),
     defineField({
-      name: 'location',
-      type: 'reference',
-      to: [{ type: 'unit' }],
-      title: 'Location',
+      name: 'warrantyUntil',
+      type: 'date',
+      title: 'Garantie bis',
+      group: 'service',
     }),
     defineField({
-      name: 'serviceHistory',
+      name: 'lastService',
+      type: 'date',
+      title: 'Letzter Service',
+      group: 'service',
+    }),
+    defineField({
+      name: 'nextService',
+      type: 'date',
+      title: 'Nächster Service',
+      group: 'service',
+    }),
+    // --- Group: docs ---
+    defineField({
+      name: 'documents',
       type: 'array',
-      title: 'Service Log',
-      of: [serviceHistoryEntry],
-    }),
-    defineField({
-      name: 'localManuals',
-      type: 'array',
-      title: 'Local Manuals (Asset-Specific Override)',
+      title: 'Dokumente',
+      group: 'docs',
       of: [
         defineArrayMember({
           type: 'file',
-          options: { accept: '.pdf,.txt,.html' },
+          options: { accept: '.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg' },
         }),
       ],
     }),
@@ -110,13 +180,21 @@ export const asset = defineType({
   preview: {
     select: {
       name: 'name',
-      unitName: 'location.name',
-      typeName: 'type.name',
+      assetType: 'assetType',
+      buildingName: 'building.name',
+      status: 'status',
+      mainImage: 'mainImage',
     },
-    prepare({ name, unitName, typeName }) {
+    prepare({ name, assetType, buildingName, status, mainImage }) {
+      const subtitle = buildingName
+        ? `${assetType || 'Asset'} | ${buildingName}`
+        : assetType || undefined
+      const media =
+        mainImage || (status === 'defect' ? WarningOutlineIcon : ComponentIcon)
       return {
         title: name,
-        subtitle: [unitName, typeName].filter(Boolean).join(' • ') || undefined,
+        subtitle,
+        media,
       }
     },
   },
