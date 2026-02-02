@@ -13,18 +13,23 @@ export const floor = defineType({
       title: 'Name',
     }),
     defineField({
-      name: 'parentSection',
+      name: 'parentBuilding',
       type: 'reference',
-      to: [{ type: 'buildingSection' }],
-      title: 'Parent Section',
+      to: [{ type: 'building' }],
+      title: 'Gebäude',
+    }),
+    defineField({
+      name: 'parentSection',
+      type: 'string',
+      title: 'Gebäudeteil',
     }),
   ],
   preview: {
-    select: { name: 'name', sectionName: 'parentSection.name' },
-    prepare({ name, sectionName }) {
+    select: { name: 'name', buildingName: 'parentBuilding.name', sectionName: 'parentSection' },
+    prepare({ name, buildingName, sectionName }) {
       return {
         title: name,
-        subtitle: sectionName,
+        subtitle: [buildingName, sectionName].filter(Boolean).join(' • ') || undefined,
       }
     },
   },

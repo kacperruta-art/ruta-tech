@@ -11,7 +11,7 @@ import { apiVersion } from '@/sanity/env'
 const BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
 
-const ASSETS_QUERY = `*[_type == "asset" && defined(location) && (location->parentFloor->parentSection->parentProperty._ref == $id || location->parentFloor->parentSection->parentProperty._ref == $baseId)] | order(name asc) {
+const ASSETS_QUERY = `*[_type == "asset" && defined(location) && (location->parentFloor->parentBuilding._ref == $id || location->parentFloor->parentBuilding._ref == $baseId)] | order(name asc) {
   _id,
   name,
   "slug": publicId.current
@@ -19,16 +19,16 @@ const ASSETS_QUERY = `*[_type == "asset" && defined(location) && (location->pare
 
 const ASSET_OWNER_QUERY = `*[_id == $id || _id == $baseId][0]{
   "slug": publicId.current,
-  "clientSlug": location->parentFloor->parentSection->parentProperty->owner->slug.current
+  "clientSlug": location->parentFloor->parentBuilding->client->slug.current
 }`
 
-const PROPERTY_OWNER_QUERY = `*[_id == $id || _id == $baseId][0]{
-  "ownerSlug": owner->slug.current
+const BUILDING_OWNER_QUERY = `*[_id == $id || _id == $baseId][0]{
+  "ownerSlug": client->slug.current
 }`
 
 type AssetRow = { _id: string; name?: string; slug?: string }
 type AssetOwnerResult = { slug?: string; clientSlug?: string } | null
-type PropertyOwnerResult = { ownerSlug?: string } | null
+type BuildingOwnerResult = { ownerSlug?: string } | null
 
 function PrintStyles() {
   return (
@@ -65,7 +65,7 @@ export const QRGenerator: UserViewComponent = (props) => {
   const [assets, setAssets] = useState<AssetRow[]>([])
   const [loading, setLoading] = useState(false)
   const [assetOwner, setAssetOwner] = useState<AssetOwnerResult>(null)
-  const [propertyOwnerSlug, setPropertyOwnerSlug] = useState<string | null>(null)
+  const [buildingOwnerSlug, setBuildingOwnerSlug] = useState<string | null>(null)
 
   const docType =
     typeof schemaType === 'string'
@@ -107,21 +107,21 @@ export const QRGenerator: UserViewComponent = (props) => {
     }
   }, [client, documentId, docType])
 
-  const loadPropertyAssets = useCallback(async () => {
-    if (docType !== 'property' || !documentId) return
+  const loadBuildingAssets = useCallback(async () => {
+    if (docType !== 'building' || !documentId) return
     setLoading(true)
     try {
       const id = String(documentId)
       const baseId = id.replace(/^drafts\./, '')
       const [assetsResult, ownerResult] = await Promise.all([
         client.fetch<AssetRow[]>(ASSETS_QUERY, { id, baseId }),
-        client.fetch<PropertyOwnerResult>(PROPERTY_OWNER_QUERY, { id, baseId }),
+        client.fetch<BuildingOwnerResult>(BUILDING_OWNER_QUERY, { id, baseId }),
       ])
       setAssets(assetsResult || [])
-      setPropertyOwnerSlug(ownerResult?.ownerSlug ?? null)
+      setBuildingOwnerSlug(ownerResult?.ownerSlug ?? null)
     } catch {
       setAssets([])
-      setPropertyOwnerSlug(null)
+      setBuildingOwnerSlug(null)
     } finally {
       setLoading(false)
     }
@@ -134,10 +134,10 @@ export const QRGenerator: UserViewComponent = (props) => {
   }, [docType, loadAssetOwner])
 
   useEffect(() => {
-    if (docType === 'property') {
-      loadPropertyAssets()
+    if (docType === 'building') {
+      loadBuildingAssets()
     }
-  }, [docType, loadPropertyAssets])
+  }, [docType, loadBuildingAssets])
 
   const handlePrint = useCallback(() => {
     window.print()
@@ -150,7 +150,7 @@ export const QRGenerator: UserViewComponent = (props) => {
           <Text>
             {!slug
               ? 'Generate a QR Code ID (slug) in the form to see the QR code.'
-              : 'Assign this asset to a property with an owner (client) that has a slug.'}
+              : 'Assign this asset to a building with an owner (client) that has a slug.'}
           </Text>
         </Card>
       )
@@ -190,7 +190,7 @@ export const QRGenerator: UserViewComponent = (props) => {
     )
   }
 
-  if (docType === 'property') {
+  if (docType === 'building') {
     return (
       <>
         <PrintStyles />
@@ -205,13 +205,13 @@ export const QRGenerator: UserViewComponent = (props) => {
             </Text>
             {loading ? (
               <Text muted>Loading assets…</Text>
-            ) : !propertyOwnerSlug ? (
+            ) : !buildingOwnerSlug ? (
               <Text muted>
-                Assign an owner (client) with a slug to this property to generate
+                Assign an owner (client) with a slug to this building to generate
                 QR codes.
               </Text>
             ) : assets.length === 0 ? (
-              <Text muted>No assets linked to this property yet.</Text>
+              <Text muted>No assets linked to this building yet.</Text>
             ) : (
               <>
                 <div className="qr-print-area">
@@ -223,8 +223,8 @@ export const QRGenerator: UserViewComponent = (props) => {
                   <Grid columns={[2, 3, 4]} gap={3}>
                   {assets.map((asset) => {
                     const url =
-                      asset.slug && propertyOwnerSlug
-                        ? `${BASE_URL}/${propertyOwnerSlug}/chat/${asset.slug}`
+                      asset.slug && buildingOwnerSlug
+                        ? `${BASE_URL}/${buildingOwnerSlug}/chat/${asset.slug}`
                         : ''
                     if (!url) return null
                     return (

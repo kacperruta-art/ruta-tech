@@ -21,7 +21,7 @@ export const defaultDocumentNode: DefaultDocumentNodeResolver = (
       S.view.component(QRGenerator).title('QR Code'),
     ])
   }
-  if (schemaType === 'property') {
+  if (schemaType === 'building') {
     return S.document().views([
       S.view.form(),
       S.view.component(QRGenerator).title('QR Codes List'),
