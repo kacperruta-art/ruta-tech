@@ -69,8 +69,17 @@ export async function getAssetContext(assetId: string) {
 export const assetPageQuery = groq`*[_type == "asset" && slug.current == $assetId][0]{
   _id,
   name,
-  locationName,
-  "buildingName": building->name,
-  "clientSlug": building->client->slug.current,
+  "slug": slug.current,
+  "type": assetType,
+  "location": {
+    "floorName": parentFloor->name,
+    "unitName": parentUnit->name,
+    "legacyName": locationName
+  },
+  "building": building->{
+    name,
+    "pin": pin,
+    "clientSlug": client->slug.current
+  },
   "mainImage": mainImage
 }`

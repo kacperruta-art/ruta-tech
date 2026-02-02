@@ -1,29 +1,17 @@
-import { type SchemaTypeDefinition } from 'sanity'
-
 import { asset } from './asset'
 import { assetType } from './assetType'
-import {
-  building,
-  buildingCertificate,
-  usageUnit,
-  commonArea,
-  floor,
-  zoneItem,
-  zone,
-} from './building'
 import { client } from './client'
+import { building } from './building'
+import { floor } from './floor'
+import { unit } from './unit'
 
-export const schema: { types: SchemaTypeDefinition[] } = {
+export const schema = {
   types: [
     client,
     building,
-    usageUnit,
-    commonArea,
-    buildingCertificate,
     floor,
-    zoneItem,
-    zone,
-    assetType,
+    unit,
     asset,
+    assetType,
   ],
 }
