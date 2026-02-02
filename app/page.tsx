@@ -54,7 +54,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    // Symulacja logowania -> przekierowanie do Sanity Studio
+    // LOGIN
     setTimeout(() => {
       setLoading(false);
       router.push("/studio");
@@ -62,7 +62,7 @@ export default function LoginPage() {
   };
 
   return (
-    // Używamy zmiennych z Twojego globals.css
+    
     <div className="flex min-h-screen w-full flex-col bg-[var(--background)] text-[var(--foreground)] font-sans transition-colors duration-300">
       
       {/* HEADER */}
@@ -104,7 +104,7 @@ export default function LoginPage() {
       {/* MAIN CONTENT */}
       <main className="flex flex-1 flex-col items-center justify-center p-4">
         
-        {/* CARD - Używamy var(--surface) i var(--border) */}
+        {/* CARD */}
         <div className="w-full max-w-[400px] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 shadow-xl animate-in fade-in zoom-in duration-500">
           
           {/* BRANDING CENTERED */}
@@ -132,7 +132,6 @@ export default function LoginPage() {
                 required
                 disabled={loading}
                 placeholder="admin@ruta-tech.ch"
-                // Input style: tło background (żeby odciąć się od surface karty), ramka border
                 className="w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]/50 focus:border-[var(--brand)] focus:ring-1 focus:ring-[var(--brand)] transition-all"
               />
             </div>
@@ -154,7 +153,6 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              // Button style: Tło brand, tekst biały
               className="mt-4 w-full rounded-xl bg-[var(--brand)] py-3.5 font-semibold text-white shadow-lg shadow-[var(--brand)]/20 transition-all hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {loading ? t.btnLoading : t.btnLogin}
@@ -164,7 +162,7 @@ export default function LoginPage() {
 
         {/* BACK LINK */}
         <div className="mt-8 text-center">
-          <a href="/" className="text-sm font-medium text-[var(--muted)] hover:text-[var(--brand)] transition-colors">
+          <a href="https://ruta-tech.ch" className="text-sm font-medium text-[var(--muted)] hover:text-[var(--brand)] transition-colors">
             {t.backLink}
           </a>
         </div>
