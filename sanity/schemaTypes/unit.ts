@@ -1,13 +1,5 @@
-import { DashboardIcon } from '@sanity/icons'
 import { defineField, defineType } from 'sanity'
-
-const unitTypeOptions = [
-  { title: 'Wohnung', value: 'apartment' },
-  { title: 'Büro', value: 'office' },
-  { title: 'Parkplatz', value: 'parkingSlot' },
-  { title: 'Allgemein/Gang', value: 'commonArea' },
-  { title: 'Technikraum', value: 'technical' },
-]
+import { DashboardIcon } from '@sanity/icons'
 
 export const unit = defineType({
   name: 'unit',
@@ -17,78 +9,40 @@ export const unit = defineType({
   fields: [
     defineField({
       name: 'name',
-      type: 'string',
       title: 'Bezeichnung',
+      type: 'string',
       validation: (rule) => rule.required(),
     }),
     defineField({
       name: 'type',
-      type: 'string',
       title: 'Typ',
+      type: 'string',
       options: {
-        list: unitTypeOptions,
+        list: [
+          { title: 'Wohnung', value: 'apartment' },
+          { title: 'Büro', value: 'office' },
+          { title: 'Parkplatz', value: 'parkingSlot' },
+          { title: 'Technikraum', value: 'technical' },
+          { title: 'Allgemein / Gang', value: 'commonArea' },
+          { title: 'Lager / Kellerabteil', value: 'storage' },
+        ],
       },
     }),
     defineField({
       name: 'floor',
-      type: 'reference',
       title: 'Auf Ebene',
+      type: 'reference',
       to: [{ type: 'floor' }],
     }),
     defineField({
       name: 'building',
-      type: 'reference',
       title: 'Im Gebäude',
+      type: 'reference',
       to: [{ type: 'building' }],
       validation: (rule) => rule.required(),
     }),
   ],
   preview: {
-    select: {
-      name: 'name',
-      type: 'type',
-    },
-    prepare({ name, type }) {
-      return {
-        title: name || 'Unbenannt',
-        subtitle: type,
-      }
-    },
-  },
-})
-import { DocumentIcon } from '@sanity/icons'
-import { defineType, defineField } from 'sanity'
-
-export const unit = defineType({
-  name: 'unit',
-  title: 'Wohnung',
-  type: 'document',
-  icon: DocumentIcon,
-  fields: [
-    defineField({
-      name: 'name',
-      type: 'string',
-      title: 'Name',
-    }),
-    defineField({
-      name: 'tenantName',
-      type: 'string',
-      title: 'Tenant Name',
-    }),
-    defineField({
-      name: 'parentFloor',
-      type: 'reference',
-      to: [{ type: 'floor' }],
-      title: 'Parent Floor',
-    }),
-  ],
-  preview: {
-    select: { name: 'name', tenantName: 'tenantName', floorName: 'parentFloor.name' },
-    prepare({ name, tenantName, floorName }) {
-      return {
-        title: name,
-        subtitle: [tenantName, floorName].filter(Boolean).join(' • ') || undefined,
-      }
-    },
+    select: { title: 'name', subtitle: 'type' },
   },
 })
