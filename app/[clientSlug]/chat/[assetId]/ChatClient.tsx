@@ -6,20 +6,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 type Message = { role: 'user' | 'assistant'; content: string }
 
 export type AssetHeaderInfo = {
+  _id: string
   name?: string
-  location?: {
-    name?: string
-    parentFloor?: {
-      name?: string
-      parentSection?: {
-        name?: string
-        parentProperty?: { name?: string }
-      }
-    }
-  }
+  locationName?: string
+  buildingName?: string
+  clientSlug?: string
+  mainImage?: { asset?: { url?: string } }
 } | null
-
-type LocationInfo = NonNullable<AssetHeaderInfo>['location']
 
 const STORAGE_KEY_PREFIX = 'ruta-chat-pin'
 
@@ -36,13 +29,6 @@ function fileToBase64(file: File): Promise<string> {
   })
 }
 
-function buildBreadcrumbs(location: LocationInfo): string {
-  if (!location) return ''
-  const propertyName = location.parentFloor?.parentSection?.parentProperty?.name
-  const sectionName = location.parentFloor?.parentSection?.name
-  const unitName = location.name
-  return [propertyName, sectionName, unitName].filter(Boolean).join(' • ')
-}
 
 // --- ICONS (Minimal Gemini-style) ---
 function IconAttach() {
@@ -143,7 +129,7 @@ export function ChatClient({
     const payload = {
       message: message.trim() || '(Bild gesendet)',
       pin: currentPin,
-      publicId: assetId,
+      assetId,
       ...(imageBase64 && { image: imageBase64 }),
     }
 
@@ -209,6 +195,12 @@ export function ChatClient({
   }
 
   // --- RENDER STATES (Loading, Not Found, Login) ---
+  const locationName = asset?.locationName || ''
+  const assetName = asset?.name || 'Assistent'
+  const accessTitle = locationName
+    ? `${assetName} · ${locationName}`
+    : assetName
+
   const content =
     !hasCheckedStorage ? (
       <div className="flex flex-1 items-center justify-center">
@@ -231,6 +223,9 @@ export function ChatClient({
               Zugriffsberechtigung
             </h2>
             <p className="text-sm text-[var(--muted)]">
+              {accessTitle}
+            </p>
+            <p className="mt-2 text-xs text-[var(--muted)]">
               Bitte geben Sie den Objekt-PIN ein, um den Assistenten zu starten.
             </p>
           </div>
@@ -262,9 +257,6 @@ export function ChatClient({
     ) : null
 
   // Main Chat UI (when authenticated)
-  const breadcrumbs = buildBreadcrumbs(asset?.location)
-  const assetName = asset?.name || 'Assistent'
-
   if (content) {
     return (
       <div className="flex min-h-dvh w-full flex-col bg-[var(--background)] text-[var(--foreground)]">
@@ -289,7 +281,7 @@ export function ChatClient({
                 {assetName}
               </h1>
               <p className="truncate text-xs text-[var(--muted)]">
-                {breadcrumbs || 'Standort unbekannt'}
+                {locationName || 'Standort unbekannt'}
               </p>
             </div>
           </div>

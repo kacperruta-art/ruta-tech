@@ -9,7 +9,7 @@ import {defineConfig} from 'sanity'
 import {structureTool} from 'sanity/structure'
 import {apiVersion, dataset, projectId} from './sanity/env'
 import {schema} from './sanity/schemaTypes'
-import {structure, defaultDocumentNode} from './sanity/structure'
+import {structure, defaultDocumentNode} from './sanity/deskStructure'
 import React from 'react'
 
 // Define Logo INLINE - No external files, no JSX compilation issues

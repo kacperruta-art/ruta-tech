@@ -9,9 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.20",
     "@google/generative-ai": "^0.24.1",
     "@sanity/image-url": "^1.2.0",
     "@sanity/vision": "^4.22.0",
+    "ai": "^6.0.67",
     "next": "16.1.6",
     "next-sanity": "^11.6.12",
     "qrcode.react": "^4.2.0",

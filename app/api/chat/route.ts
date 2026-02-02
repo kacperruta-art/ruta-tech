@@ -1,151 +1,18 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { streamText } from 'ai'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { NextResponse } from 'next/server'
 
-import { client } from '@/sanity/client'
+import { getAssetContext } from '@/lib/sanity/queries'
 
 const GEMINI_MODEL = 'gemini-2.0-flash'
-const ASSET_QUERY = `*[_type == "asset" && publicId.current == $publicId][0]{
-  _id,
-  name,
-  publicId,
-  serviceHistory,
-  "location": location->{
-    name,
-    "parentFloor": parentFloor->{
-      name,
-      "parentSection": parentSection->{
-        name,
-        "parentProperty": parentProperty->{
-          _id,
-          name,
-          pin
-        }
-      }
-    }
-  },
-  "assetType": type->{
-    _id,
-    name,
-    maintenanceInstructions,
-    "manuals": manuals[]{
-      asset->{
-        url,
-        originalFilename
-      }
-    }
-  },
-  "localManuals": localManuals[]{
-    asset->{
-      url,
-      originalFilename
-    }
-  }
-}`
 
-// Portable Text block structure
-type PortableTextBlock = {
-  _type?: string
-  children?: { text?: string }[]
-}
+type ImagePart = { type: 'image'; image: Uint8Array; mimeType: string }
+type TextPart = { type: 'text'; text: string }
 
-// Convert Portable Text (blocks array) to plain string
-function portableTextToPlainText(blocks: PortableTextBlock[] | null | undefined): string {
-  if (!Array.isArray(blocks) || blocks.length === 0) return ''
-  return blocks
-    .map((block) => {
-      if (block._type !== 'block' || !block.children) return ''
-      return block.children.map((c) => c?.text ?? '').join('')
-    })
-    .filter(Boolean)
-    .join('\n\n')
-}
-
-// Service history entry structure
-type ServiceHistoryEntry = {
-  date?: string
-  type?: string
-  technician?: string
-  description?: string
-}
-
-// Format service history as summary string
-function formatServiceHistory(entries: ServiceHistoryEntry[] | null | undefined): string {
-  if (!Array.isArray(entries) || entries.length === 0) return 'No service history recorded.'
-  return entries
-    .map((e) => {
-      const date = e.date || 'Unknown date'
-      const type = e.type || 'Service'
-      const desc = e.description?.trim() || 'No details'
-      return `[${date}] - [${type}]: ${desc}`
-    })
-    .join('\n')
-}
-
-// Build location context string from asset hierarchy
-function buildLocationContext(location: {
-  name?: string
-  parentFloor?: {
-    name?: string
-    parentSection?: {
-      name?: string
-      parentProperty?: { name?: string }
-    }
-  }
-} | null | undefined): string {
-  if (!location) return 'Location unknown.'
-  const propertyName = location.parentFloor?.parentSection?.parentProperty?.name
-  const sectionName = location.parentFloor?.parentSection?.name
-  const floorName = location.parentFloor?.name
-  const unitName = location.name
-  const parts = [propertyName, sectionName, floorName, unitName].filter(Boolean)
-  return parts.length > 0 ? parts.join(', ') : 'Location unknown.'
-}
-
-// Build system prompt with Official Manual, Device Context, and Location
-function buildSystemPrompt(
-  instructionsText: string,
-  historyLog: string,
-  manualUrls: string[],
-  locationContext: string
-): string {
-  const manualSection =
-    manualUrls.length > 0
-      ? `\n\nReference Documents (PDF/TXT/HTML URLs):\n${manualUrls.map((u) => `- ${u}`).join('\n')}`
-      : ''
-
-  const baseInstructions = instructionsText.trim() || 'Provide clear, practical guidance for maintenance and troubleshooting.'
-
-  return `You are a helpful technician assistant for Asset Lifecycle Management. You have access to:
-1. Official Manual – General knowledge and procedures for this asset type
-2. Device Location – Where this specific device is installed
-3. Device Context – This specific device's service history
-4. Reference Documents – Links to official manuals (when available)
-
-You also have access to the device's specific service history. Use it to diagnose recurring issues (e.g., if a part was just replaced, don't suggest replacing it again immediately).
-
---- DEVICE LOCATION ---
-${locationContext}
-
---- OFFICIAL MANUAL ---
-${baseInstructions}
-${manualSection}
-
---- DEVICE CONTEXT (Service History) ---
-Past Events:
-${historyLog}
-
----
-
-Respond concisely and professionally. Focus on actionable steps. Use the service history to inform your recommendations and avoid redundant suggestions.`
-}
-
-// Parse image input: accept base64 string or data URL, return inline data format
-function parseImageForGemini(
-  image: unknown
-): { inlineData: { data: string; mimeType: string } } | null {
+function parseImagePart(image: unknown): ImagePart | null {
   if (!image || typeof image !== 'string') return null
 
-  let base64Data: string
+  let base64Data = image
   let mimeType = 'image/jpeg'
 
   if (image.startsWith('data:')) {
@@ -153,12 +20,27 @@ function parseImageForGemini(
     if (!match) return null
     mimeType = match[1] || 'image/jpeg'
     base64Data = match[2]
-  } else {
-    base64Data = image
   }
 
   if (!base64Data) return null
-  return { inlineData: { data: base64Data, mimeType } }
+  const buffer = Buffer.from(base64Data, 'base64')
+  return { type: 'image', image: new Uint8Array(buffer), mimeType }
+}
+
+function buildSystemPrompt(context: unknown): string {
+  const locationName =
+    typeof (context as { locationName?: string })?.locationName === 'string'
+      ? (context as { locationName?: string }).locationName
+      : 'Unbekannt'
+  const prettyContext = JSON.stringify(context, null, 2)
+
+  return `You are a Facility Manager Assistant.
+You have access to the building structure in context.building.structure (floors and zones).
+If a user reports an issue, try to locate the specific area in the structure.
+The asset is located at: ${locationName}.
+
+Context JSON:
+${prettyContext}`
 }
 
 export async function POST(request: Request) {
@@ -172,10 +54,10 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { message, pin, publicId, image } = body as {
+    const { message, pin, assetId, image } = body as {
       message?: string
       pin?: string
-      publicId?: string
+      assetId?: string
       image?: string
     }
 
@@ -186,9 +68,9 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!publicId || typeof publicId !== 'string') {
+    if (!assetId || typeof assetId !== 'string') {
       return NextResponse.json(
-        { error: 'Missing or invalid publicId' },
+        { error: 'Missing or invalid assetId' },
         { status: 400 }
       )
     }
@@ -200,83 +82,34 @@ export async function POST(request: Request) {
       )
     }
 
-    const asset = await client.fetch<{
-      _id: string
-      name?: string
-      publicId?: { current?: string }
-      serviceHistory?: Array<{
-        date?: string
-        type?: string
-        technician?: string
-        description?: string
-      }>
-      location?: {
-        name?: string
-        parentFloor?: {
-          name?: string
-          parentSection?: {
-            name?: string
-            parentProperty?: { _id: string; name?: string; pin?: string }
-          }
-        }
-      } | null
-      assetType?: {
-        _id: string
-        name?: string
-        maintenanceInstructions?: PortableTextBlock[]
-        manuals?: Array<{ asset?: { url?: string; originalFilename?: string } }>
-      } | null
-      localManuals?: Array<{ asset?: { url?: string; originalFilename?: string } }>
-    } | null>(ASSET_QUERY, { publicId })
-
-    if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 })
+    const context = await getAssetContext(assetId)
+    if (!context) {
+      return new Response('Asset not found', { status: 404 })
     }
 
-    const propertyPin =
-      asset.location?.parentFloor?.parentSection?.parentProperty?.pin
-    if (propertyPin !== pin) {
-      return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 })
+    if (context.building?.pin && context.building.pin !== pin) {
+      return new Response('Invalid PIN', { status: 401 })
     }
 
-    const instructionsText = portableTextToPlainText(
-      asset.assetType?.maintenanceInstructions as PortableTextBlock[] | undefined
-    )
-    const historyLog = formatServiceHistory(asset.serviceHistory)
-    const locationContext = buildLocationContext(asset.location)
+    const systemPrompt = buildSystemPrompt(context)
+    const contentParts: Array<TextPart | ImagePart> = [
+      { type: 'text', text: message.trim() },
+    ]
+    const imagePart = parseImagePart(image)
+    if (imagePart) {
+      contentParts.push(imagePart)
+    }
 
-    const typeManualUrls =
-      asset.assetType?.manuals
-        ?.map((m) => m?.asset?.url)
-        .filter((u): u is string => typeof u === 'string' && u.length > 0) ?? []
-    const localManualUrls =
-      asset.localManuals
-        ?.map((m) => m?.asset?.url)
-        .filter((u): u is string => typeof u === 'string' && u.length > 0) ?? []
-    const manualUrls =
-      localManualUrls.length > 0 ? localManualUrls : typeManualUrls
-
-    const systemPrompt = buildSystemPrompt(
-      instructionsText,
-      historyLog,
-      manualUrls,
-      locationContext
-    )
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: GEMINI_MODEL,
-      systemInstruction: systemPrompt,
+    const google = createGoogleGenerativeAI({
+      apiKey,
     })
 
-    const parts: (string | { inlineData: { data: string; mimeType: string } })[] = [message]
-    const imagePart = parseImageForGemini(image)
-    if (imagePart) {
-      parts.push(imagePart)
-    }
-
-    const result = await model.generateContent(parts)
-    const response = result.response
-    const text = response.text()
+    const result = await streamText({
+      model: google(GEMINI_MODEL),
+      system: systemPrompt,
+      messages: [{ role: 'user', content: contentParts }],
+    })
+    const text = await result.text
 
     if (!text) {
       return NextResponse.json(
