@@ -13,8 +13,12 @@ export const assetContextQuery = groq`*[_type == "asset" && slug.current == $ass
   "model": model,
   "installDate": installDate,
   
-  // Link string defined in Asset
-  locationName, 
+  // Location references + legacy fallback
+  "location": {
+    "floorName": parentFloor->name,
+    "unitName": parentUnit->name,
+    "legacyName": locationName
+  },
 
   // Parent Building - The Source of Truth
   "building": building->{

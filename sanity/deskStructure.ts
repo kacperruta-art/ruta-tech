@@ -2,21 +2,17 @@ import type {
   DefaultDocumentNodeResolver,
   StructureResolver,
 } from 'sanity/structure'
+import { EditIcon } from '@sanity/icons'
 
 import { QRGenerator } from './components/QRGenerator'
 
 // https://www.sanity.io/docs/structure-builder-cheat-sheet
 type StructureBuilder = Parameters<StructureResolver>[0]
 
-const buildingView = (S: StructureBuilder, buildingId: string) =>
+const buildingChildrenView = (S: StructureBuilder, buildingId: string) =>
   S.list()
-    .title('Gebäude')
+    .title('Gebäude Inhalt')
     .items([
-      S.listItem()
-        .title('Gebäude bearbeiten')
-        .child(
-          S.document().schemaType('building').documentId(buildingId)
-        ),
       S.listItem()
         .title('Ebenen & Bereiche')
         .child(
@@ -44,17 +40,27 @@ const buildingView = (S: StructureBuilder, buildingId: string) =>
         ),
     ])
 
-const floorView = (
+const buildingView = (S: StructureBuilder, buildingId: string) =>
+  S.list()
+    .title('Gebäude')
+    .items([
+      S.listItem()
+        .title('Gebäude bearbeiten')
+        .icon(EditIcon)
+        .child(S.document().schemaType('building').documentId(buildingId)),
+      S.listItem()
+        .title('Gebäude Inhalt')
+        .child(buildingChildrenView(S, buildingId)),
+    ])
+
+const floorChildrenView = (
   S: StructureBuilder,
   buildingId: string,
   floorId: string
 ) =>
   S.list()
-    .title('Ebene')
+    .title('Ebene Inhalt')
     .items([
-      S.listItem()
-        .title('Ebene bearbeiten')
-        .child(S.document().schemaType('floor').documentId(floorId)),
       S.listItem()
         .title('Räume & Einheiten')
         .child(
@@ -82,18 +88,32 @@ const floorView = (
         ),
     ])
 
-const unitView = (
+const floorView = (
+  S: StructureBuilder,
+  buildingId: string,
+  floorId: string
+) =>
+  S.list()
+    .title('Ebene')
+    .items([
+      S.listItem()
+        .title('Ebene bearbeiten')
+        .icon(EditIcon)
+        .child(S.document().schemaType('floor').documentId(floorId)),
+      S.listItem()
+        .title('Ebene Inhalt')
+        .child(floorChildrenView(S, buildingId, floorId)),
+    ])
+
+const unitChildrenView = (
   S: StructureBuilder,
   buildingId: string,
   floorId: string,
   unitId: string
 ) =>
   S.list()
-    .title('Einheit')
+    .title('Einheit Inhalt')
     .items([
-      S.listItem()
-        .title('Einheit bearbeiten')
-        .child(S.document().schemaType('unit').documentId(unitId)),
       S.listItem()
         .title('Assets im Raum')
         .child(
@@ -111,15 +131,48 @@ const unitView = (
         ),
     ])
 
+const unitView = (
+  S: StructureBuilder,
+  buildingId: string,
+  floorId: string,
+  unitId: string
+) =>
+  S.list()
+    .title('Einheit')
+    .items([
+      S.listItem()
+        .title('Einheit bearbeiten')
+        .icon(EditIcon)
+        .child(S.document().schemaType('unit').documentId(unitId)),
+      S.listItem()
+        .title('Einheit Inhalt')
+        .child(unitChildrenView(S, buildingId, floorId, unitId)),
+    ])
+
+const clientView = (S: StructureBuilder, clientId: string) =>
+  S.list()
+    .title('Kunde')
+    .items([
+      S.listItem()
+        .title('Kunde bearbeiten')
+        .icon(EditIcon)
+        .child(S.document().schemaType('client').documentId(clientId)),
+      S.listItem()
+        .title('Gebäude')
+        .child(
+          S.documentTypeList('building')
+            .title('Gebäude')
+            .filter('_type == "building" && client._ref == $clientId')
+            .params({ clientId })
+            .child((buildingId) => buildingView(S, buildingId))
+        ),
+    ])
+
 export const structure: StructureResolver = (S) =>
   S.documentTypeList('client')
     .title('Kunden')
     .child((clientId) =>
-      S.documentTypeList('building')
-        .title('Gebäude')
-        .filter('_type == "building" && client._ref == $clientId')
-        .params({ clientId })
-        .child((buildingId) => buildingView(S, buildingId))
+      clientView(S, clientId)
     )
 
 export const defaultDocumentNode: DefaultDocumentNodeResolver = (

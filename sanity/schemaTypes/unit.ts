@@ -1,48 +1,36 @@
-import { defineField, defineType } from 'sanity'
-import { DashboardIcon } from '@sanity/icons'
+import { DocumentIcon } from '@sanity/icons'
+import { defineType, defineField } from 'sanity'
 
 export const unit = defineType({
   name: 'unit',
-  title: 'Raum / Einheit',
+  title: 'Wohnung',
   type: 'document',
-  icon: DashboardIcon,
+  icon: DocumentIcon,
   fields: [
     defineField({
       name: 'name',
-      title: 'Bezeichnung',
       type: 'string',
-      validation: (rule) => rule.required(),
+      title: 'Name',
     }),
     defineField({
-      name: 'type',
-      title: 'Typ',
+      name: 'tenantName',
       type: 'string',
-      options: {
-        list: [
-          { title: 'Wohnung', value: 'apartment' },
-          { title: 'Büro', value: 'office' },
-          { title: 'Parkplatz', value: 'parkingSlot' },
-          { title: 'Technikraum', value: 'technical' },
-          { title: 'Allgemein / Gang', value: 'commonArea' },
-          { title: 'Lager / Kellerabteil', value: 'storage' },
-        ],
-      },
+      title: 'Tenant Name',
     }),
     defineField({
-      name: 'floor',
-      title: 'Auf Ebene',
+      name: 'parentFloor',
       type: 'reference',
       to: [{ type: 'floor' }],
-    }),
-    defineField({
-      name: 'building',
-      title: 'Im Gebäude',
-      type: 'reference',
-      to: [{ type: 'building' }],
-      validation: (rule) => rule.required(),
+      title: 'Parent Floor',
     }),
   ],
   preview: {
-    select: { title: 'name', subtitle: 'type' },
+    select: { name: 'name', tenantName: 'tenantName', floorName: 'parentFloor.name' },
+    prepare({ name, tenantName, floorName }) {
+      return {
+        title: name,
+        subtitle: [tenantName, floorName].filter(Boolean).join(' • ') || undefined,
+      }
+    },
   },
 })

@@ -7,12 +7,11 @@ import {
   buildingCertificate,
   usageUnit,
   commonArea,
+  floor,
   zoneItem,
   zone,
 } from './building'
 import { client } from './client'
-import { floor } from './floor'
-import { unit } from './unit'
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -22,7 +21,6 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     commonArea,
     buildingCertificate,
     floor,
-    unit,
     zoneItem,
     zone,
     assetType,
