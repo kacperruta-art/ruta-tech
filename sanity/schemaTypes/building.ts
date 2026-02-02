@@ -40,6 +40,72 @@ const typeTitleMap = (options: { title: string; value: string }[]) =>
 
 const buildingSectionTypeTitles = typeTitleMap(buildingSectionTypeOptions)
 
+const managerEntry = defineArrayMember({
+  type: 'object',
+  name: 'managerEntry',
+  title: 'Kontakt',
+  icon: infoIcon,
+  fields: [
+    defineField({
+      name: 'kind',
+      type: 'string',
+      title: 'Typ',
+      options: {
+        list: [
+          { title: 'Kontaktangaben', value: 'contact' },
+          { title: 'Firma (Referenz)', value: 'client' },
+        ],
+      },
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'contact',
+      type: 'string',
+      title: 'Kontaktangaben',
+      description: 'Name, Telefon oder E-Mail.',
+      hidden: ({ parent }) => parent?.kind === 'client',
+      validation: (rule) =>
+        rule.custom((value, context) => {
+          const parent = context.parent as { kind?: string; client?: unknown } | undefined
+          if (parent?.kind === 'contact' && !value) {
+            return 'Kontaktangaben sind erforderlich.'
+          }
+          return true
+        }),
+    }),
+    defineField({
+      name: 'client',
+      type: 'reference',
+      to: [{ type: 'client' }],
+      title: 'Firma',
+      hidden: ({ parent }) => parent?.kind === 'contact',
+      validation: (rule) =>
+        rule.custom((value, context) => {
+          const parent = context.parent as { kind?: string; contact?: unknown } | undefined
+          if (parent?.kind === 'client' && !value) {
+            return 'Bitte eine Firma auswählen.'
+          }
+          return true
+        }),
+    }),
+  ],
+  preview: {
+    select: {
+      kind: 'kind',
+      contact: 'contact',
+      clientName: 'client.name',
+    },
+    prepare({ kind, contact, clientName }) {
+      const title =
+        kind === 'client' ? clientName || 'Firma' : contact || 'Kontaktangaben'
+      return {
+        title,
+        subtitle: kind === 'client' ? 'Firma' : 'Kontakt',
+      }
+    },
+  },
+})
+
 export const buildingSection = defineType({
   name: 'buildingSection',
   title: 'Gebäudeteil',
@@ -164,10 +230,7 @@ export const building = defineType({
       title: 'Verwaltung / Ansprechpartner',
       description: 'Kontaktangaben oder Referenz zu einer Firma.',
       group: 'basis',
-      of: [
-        defineArrayMember({ type: 'string', title: 'Kontaktangaben' }),
-        defineArrayMember({ type: 'reference', to: [{ type: 'client' }], title: 'Firma' }),
-      ],
+      of: [managerEntry],
       validation: (rule) => rule.max(1),
     }),
     defineField({
