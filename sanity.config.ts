@@ -41,7 +41,96 @@ export default defineConfig({
   // Change title to verify deployment worked
   title: 'Ruta Tech Admin',
 
-  schema,
+  schema: {
+    ...schema,
+    templates: (prev) => [
+      ...prev,
+      // 1. Create Floor inside Building
+      {
+        id: 'floor-by-building',
+        title: 'Neue Ebene in Gebäude',
+        schemaType: 'floor',
+        parameters: [{ name: 'buildingId', type: 'string' }],
+        value: ({ buildingId }: { buildingId: string }) => ({
+          building: { _type: 'reference', _ref: buildingId },
+        }),
+      },
+      // 2. Create Unit inside Floor (needs Building ID too for query efficiency)
+      {
+        id: 'unit-by-floor',
+        title: 'Neuer Raum auf Ebene',
+        schemaType: 'unit',
+        parameters: [
+          { name: 'buildingId', type: 'string' },
+          { name: 'floorId', type: 'string' },
+        ],
+        value: ({
+          buildingId,
+          floorId,
+        }: {
+          buildingId: string
+          floorId: string
+        }) => ({
+          building: { _type: 'reference', _ref: buildingId },
+          floor: { _type: 'reference', _ref: floorId },
+        }),
+      },
+      // 3. Asset directly on Building (e.g., Lift)
+      {
+        id: 'asset-by-building',
+        title: 'Neues Asset (Gebäude-Ebene)',
+        schemaType: 'asset',
+        parameters: [{ name: 'buildingId', type: 'string' }],
+        value: ({ buildingId }: { buildingId: string }) => ({
+          building: { _type: 'reference', _ref: buildingId },
+        }),
+      },
+      // 4. Asset on Floor (e.g., Corridor Light)
+      {
+        id: 'asset-by-floor',
+        title: 'Neues Asset (Ebene)',
+        schemaType: 'asset',
+        parameters: [
+          { name: 'buildingId', type: 'string' },
+          { name: 'floorId', type: 'string' },
+        ],
+        value: ({
+          buildingId,
+          floorId,
+        }: {
+          buildingId: string
+          floorId: string
+        }) => ({
+          building: { _type: 'reference', _ref: buildingId },
+          parentFloor: { _type: 'reference', _ref: floorId },
+        }),
+      },
+      // 5. Asset in Unit (e.g., Washing Machine)
+      {
+        id: 'asset-by-unit',
+        title: 'Neues Asset (Raum)',
+        schemaType: 'asset',
+        parameters: [
+          { name: 'buildingId', type: 'string' },
+          { name: 'floorId', type: 'string' },
+          { name: 'unitId', type: 'string' },
+        ],
+        value: ({
+          buildingId,
+          floorId,
+          unitId,
+        }: {
+          buildingId: string
+          floorId: string
+          unitId: string
+        }) => ({
+          building: { _type: 'reference', _ref: buildingId },
+          parentFloor: { _type: 'reference', _ref: floorId },
+          parentUnit: { _type: 'reference', _ref: unitId },
+        }),
+      },
+    ],
+  },
 
   plugins: [
     structureTool({structure, defaultDocumentNode}),

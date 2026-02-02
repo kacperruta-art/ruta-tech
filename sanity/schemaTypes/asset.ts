@@ -38,7 +38,7 @@ export const asset = defineType({
     { name: 'tech', title: 'Technik & Specs', icon: ComponentIcon },
     { name: 'service', title: 'Service & Garantie', icon: CalendarIcon },
     { name: 'docs', title: 'Dokumente', icon: CheckmarkCircleIcon },
-    { name: 'legacy', title: 'Legacy', icon: WarningOutlineIcon },
+    { name: 'legacy', title: 'Legacy', icon: WarningOutlineIcon, hidden: true },
   ],
   fieldsets: [
     { name: 'techDetails', title: 'Technische Daten', options: { columns: 2 } },
@@ -95,8 +95,7 @@ export const asset = defineType({
       type: 'reference',
       to: [{ type: 'floor' }],
       title: 'Ebene / Etage',
-      description:
-        'Optional. Wähle eine Ebene, wenn das Gerät nicht in einem spezifischen Raum ist (z.B. Ganglicht).',
+      description: 'Optional. Wähle eine Ebene (z.B. 1. OG).',
       group: 'location',
     }),
     defineField({
@@ -104,7 +103,7 @@ export const asset = defineType({
       type: 'reference',
       to: [{ type: 'unit' }],
       title: 'Raum / Einheit',
-      description: 'Optional. Wähle den Raum (z.B. Wohnung 2.1), falls zutreffend.',
+      description: 'Optional. Wähle einen Raum (z.B. Wohnung 2.1).',
       group: 'location',
     }),
     defineField({
@@ -115,7 +114,6 @@ export const asset = defineType({
         "Name of the section defined in the Building (e.g. 'Waschküche A').",
       group: 'legacy',
       readOnly: true,
-      hidden: true,
     }),
     defineField({
       name: 'coordinates',
