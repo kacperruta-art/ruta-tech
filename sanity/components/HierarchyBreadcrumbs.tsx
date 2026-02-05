@@ -13,10 +13,26 @@ type ResolvedNode = {
   type: 'client' | 'building' | 'floor' | 'unit'
 }
 
-type ClientNode = { _id?: string | null; name?: string | null }
-type BuildingNode = { _id?: string | null; name?: string | null; client?: ClientNode | null }
-type FloorNode = { _id?: string | null; name?: string | null; building?: BuildingNode | null }
-type UnitNode = { _id?: string | null; name?: string | null; floor?: FloorNode | null; building?: BuildingNode | null }
+type ClientNode = { _id?: string | null; name?: string | null; title?: string | null }
+type BuildingNode = {
+  _id?: string | null
+  name?: string | null
+  title?: string | null
+  client?: ClientNode | null
+}
+type FloorNode = {
+  _id?: string | null
+  name?: string | null
+  title?: string | null
+  building?: BuildingNode | null
+}
+type UnitNode = {
+  _id?: string | null
+  name?: string | null
+  title?: string | null
+  floor?: FloorNode | null
+  building?: BuildingNode | null
+}
 
 type ResolvedHierarchy = {
   client?: ClientNode | null
@@ -27,8 +43,8 @@ type ResolvedHierarchy = {
 
 const apiVersion = '2024-01-01'
 
-const labelFromNode = (name?: string | null, fallback = 'Unknown') =>
-  name?.trim() || fallback
+const labelFromNode = (node?: { name?: string | null; title?: string | null }, fallback = 'Unknown') =>
+  node?.name?.trim() || node?.title?.trim() || fallback
 
 export function HierarchyBreadcrumbs(_props: InputProps) {
   const client = useClient({ apiVersion })
@@ -61,8 +77,9 @@ export function HierarchyBreadcrumbs(_props: InputProps) {
               `*[_id == $id][0]{
                 _id,
                 name,
-                floor->{ _id, name, "building": building->{ _id, name, "client": client->{ _id, name } } },
-                "building": building->{ _id, name, "client": client->{ _id, name } }
+                title,
+                "floor": floor->{ _id, name, title, "building": building->{ _id, name, title, "client": client->{ _id, name, title } } },
+                "building": building->{ _id, name, title, "client": client->{ _id, name, title } }
               }`,
               { id: unitRef }
             )
@@ -87,7 +104,8 @@ export function HierarchyBreadcrumbs(_props: InputProps) {
               `*[_id == $id][0]{
                 _id,
                 name,
-                "building": building->{ _id, name, "client": client->{ _id, name } }
+                title,
+                "building": building->{ _id, name, title, "client": client->{ _id, name, title } }
               }`,
               { id: floorRef }
             )
@@ -107,7 +125,7 @@ export function HierarchyBreadcrumbs(_props: InputProps) {
         queries.push(
           client
             .fetch<BuildingNode>(
-              `*[_id == $id][0]{ _id, name, "client": client->{ _id, name } }`,
+              `*[_id == $id][0]{ _id, name, title, "client": client->{ _id, name, title } }`,
               { id: buildingRef }
             )
             .then((result) => {
@@ -133,7 +151,13 @@ export function HierarchyBreadcrumbs(_props: InputProps) {
     if (resolved.client?._id) {
       chain.push({
         id: resolved.client._id,
-        label: labelFromNode(resolved.client.name, 'Unknown'),
+        label: labelFromNode(resolved.client, 'Unknown'),
+        type: 'client',
+      })
+    } else if (type && (building?._ref || floor?._ref || unit?._ref)) {
+      chain.push({
+        id: '',
+        label: '<?>',
         type: 'client',
       })
     }
@@ -141,7 +165,13 @@ export function HierarchyBreadcrumbs(_props: InputProps) {
     if (resolved.building?._id) {
       chain.push({
         id: resolved.building._id,
-        label: labelFromNode(resolved.building.name, 'Unknown'),
+        label: labelFromNode(resolved.building, 'Unknown'),
+        type: 'building',
+      })
+    } else if (type && (floor?._ref || unit?._ref)) {
+      chain.push({
+        id: '',
+        label: '<?>',
         type: 'building',
       })
     }
@@ -149,7 +179,13 @@ export function HierarchyBreadcrumbs(_props: InputProps) {
     if ((type === 'asset' || type === 'unit' || type === 'floor') && resolved.floor?._id) {
       chain.push({
         id: resolved.floor._id,
-        label: labelFromNode(resolved.floor.name, 'Unknown'),
+        label: labelFromNode(resolved.floor, 'Unknown'),
+        type: 'floor',
+      })
+    } else if (type === 'asset' || type === 'unit') {
+      chain.push({
+        id: '',
+        label: '<?>',
         type: 'floor',
       })
     }
@@ -157,7 +193,13 @@ export function HierarchyBreadcrumbs(_props: InputProps) {
     if ((type === 'asset' || type === 'unit') && resolved.unit?._id) {
       chain.push({
         id: resolved.unit._id,
-        label: labelFromNode(resolved.unit.name, 'Unknown'),
+        label: labelFromNode(resolved.unit, 'Unknown'),
+        type: 'unit',
+      })
+    } else if (type === 'asset') {
+      chain.push({
+        id: '',
+        label: '<?>',
         type: 'unit',
       })
     }
