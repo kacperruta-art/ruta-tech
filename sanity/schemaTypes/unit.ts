@@ -13,6 +13,16 @@ export const unit = defineType({
       title: 'Name',
     }),
     defineField({
+      name: 'slug',
+      title: 'Slug',
+      type: 'slug',
+      options: {
+        source: 'name',
+        maxLength: 96,
+      },
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
       name: 'tenantName',
       type: 'string',
       title: 'Tenant Name',
