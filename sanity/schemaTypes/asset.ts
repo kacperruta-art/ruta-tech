@@ -47,16 +47,14 @@ export const asset = defineType({
   fields: [
     defineField({
       name: 'locationContext',
-      title: 'Navigation / Pfad',
+      title: 'Navigation',
       type: 'string',
       group: 'basis',
-      readOnly: true,
+      hidden: false,
       components: {
         input: HierarchyBreadcrumbs,
       },
-      initialValue: 'Start',
-      description:
-        'Klicken Sie auf die Pfadelemente, um zum übergeordneten Objekt zu springen.',
+      initialValue: 'Navigation',
     }),
     // --- Group: basis ---
     defineField({

@@ -10,15 +10,13 @@ export const floor = defineType({
   fields: [
     defineField({
       name: 'locationContext',
-      title: 'Navigation / Pfad',
+      title: 'Navigation',
       type: 'string',
-      readOnly: true,
+      hidden: false,
       components: {
         input: HierarchyBreadcrumbs,
       },
-      initialValue: 'Start',
-      description:
-        'Klicken Sie auf die Pfadelemente, um zum übergeordneten Objekt zu springen.',
+      initialValue: 'Navigation',
     }),
     defineField({
       name: 'name',
