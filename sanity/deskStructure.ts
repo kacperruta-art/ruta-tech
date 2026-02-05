@@ -4,7 +4,8 @@ import type {
 } from 'sanity/structure'
 import { EditIcon } from '@sanity/icons'
 
-import { QRGenerator } from './components/QRGenerator'
+import { AssetQRView } from './components/AssetQRView'
+import { QRBatchList } from './components/QRBatchList'
 
 // https://www.sanity.io/docs/structure-builder-cheat-sheet
 type StructureBuilder = Parameters<StructureResolver>[0]
@@ -182,13 +183,34 @@ export const defaultDocumentNode: DefaultDocumentNodeResolver = (
   if (schemaType === 'asset') {
     return S.document().views([
       S.view.form(),
-      S.view.component(QRGenerator).title('QR Code'),
+      S.view.component(AssetQRView).title('QR Code'),
     ])
   }
   if (schemaType === 'building') {
     return S.document().views([
       S.view.form(),
-      S.view.component(QRGenerator).title('QR Codes List'),
+      S.view
+        .component(QRBatchList)
+        .title('Alle QR Codes (Gebäude)')
+        .options({ level: 'building' }),
+    ])
+  }
+  if (schemaType === 'floor') {
+    return S.document().views([
+      S.view.form(),
+      S.view
+        .component(QRBatchList)
+        .title('QR Codes (Ebene)')
+        .options({ level: 'floor' }),
+    ])
+  }
+  if (schemaType === 'unit') {
+    return S.document().views([
+      S.view.form(),
+      S.view
+        .component(QRBatchList)
+        .title('QR Codes (Raum)')
+        .options({ level: 'unit' }),
     ])
   }
   return S.document()
