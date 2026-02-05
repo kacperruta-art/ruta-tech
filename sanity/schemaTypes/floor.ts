@@ -23,6 +23,12 @@ export const floor = defineType({
       type: 'string',
       title: 'Gebäudeteil',
     }),
+    defineField({
+      name: 'Gebäudeteil',
+      title: 'Gebäudeteil (Bereich)',
+      type: 'string',
+      description: 'z.B. Waschraum, Technikraum, Allgemein',
+    }),
   ],
   preview: {
     select: { name: 'name', buildingName: 'parentBuilding.name', sectionName: 'parentSection' },

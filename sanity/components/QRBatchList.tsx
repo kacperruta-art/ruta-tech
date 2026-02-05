@@ -85,11 +85,33 @@ const getBuildingBatchQuery = () => `{
   }
 }`
 
+const getFloorBatchQuery = () => `{
+  "parent": *[_id in [$id, $baseId]][0]{
+    name,
+    "slug": slug.current,
+    "clientSlug": building->client->slug.current
+  },
+  "assets": *[_type == "asset" && parentFloor._ref in [$id, $baseId]] | order(name asc){
+    _id,
+    name,
+    "slug": slug.current,
+    "buildingName": building->name,
+    "floorName": parentFloor->name,
+    "unitName": parentUnit->name,
+    "clientSlug": building->client->slug.current
+  }
+}`
+
 function PrintStyles() {
   return (
     <style>
       {`
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 1cm;
+          }
+
           body * {
             visibility: hidden;
           }
@@ -99,24 +121,45 @@ function PrintStyles() {
           }
           .qr-print-wrapper {
             position: absolute;
-            left: 0;
             top: 0;
+            left: 0;
             width: 100%;
-            margin: 0;
-            padding: 20px;
             background: white;
           }
           .master-qr-section {
-            page-break-inside: avoid;
-            margin-bottom: 40px;
+            width: 100%;
             text-align: center;
             border: 2px solid #000;
             padding: 20px;
+            margin-bottom: 1cm;
+            page-break-inside: avoid;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+          }
+          .master-qr-section h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
           }
           .qr-grid {
             display: grid !important;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            grid-template-columns: 1fr 1fr;
+            gap: 1cm;
+            width: 100%;
+          }
+          .qr-card {
+            border: 1px dashed #ccc;
+            padding: 10px;
+            text-align: center;
+            page-break-inside: avoid;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          }
+          .no-print, button, .warning-card {
+            display: none !important;
           }
         }
       `}
@@ -143,6 +186,14 @@ export const QRBatchList: UserViewComponent = (props) => {
       const baseId = id.replace(/^drafts\./, '')
       if (level === 'building') {
         const query = getBuildingBatchQuery()
+        const result = await client.fetch<{
+          parent?: ParentRow | null
+          assets?: AssetRow[] | null
+        }>(query, { id, baseId })
+        setParent(result?.parent ?? null)
+        setAssets(result?.assets ?? [])
+      } else if (level === 'floor') {
+        const query = getFloorBatchQuery()
         const result = await client.fetch<{
           parent?: ParentRow | null
           assets?: AssetRow[] | null
@@ -179,7 +230,7 @@ export const QRBatchList: UserViewComponent = (props) => {
     )
   }
 
-  if (!assets.length && !(level === 'building' && parent)) {
+  if (!assets.length && !((level === 'building' || level === 'floor') && parent)) {
     return (
       <Card padding={4} radius={2} tone="default">
         <Text muted>Keine Assets gefunden.</Text>
@@ -187,11 +238,13 @@ export const QRBatchList: UserViewComponent = (props) => {
     )
   }
 
-  const renderMasterCard = level === 'building' && parent
+  const renderMasterCard = (level === 'building' || level === 'floor') && parent?.slug
   const masterUrl =
     parent?.slug && parent?.clientSlug
       ? `${BASE_URL}/${parent.clientSlug}/chat/${parent.slug}`
       : ''
+  const masterLabel =
+    level === 'floor' ? 'EBENEN-CODE' : 'HAUPT-CODE'
 
   return (
     <>
@@ -202,15 +255,13 @@ export const QRBatchList: UserViewComponent = (props) => {
             {renderMasterCard && (
               <div className="master-qr-section">
                 <Flex align="center" direction="column" gap={3}>
-                  <Text size={2} weight="semibold">
-                    HAUPT-QR-CODE: {parent?.name || 'Gebäude Zugang'}
-                  </Text>
+                  <h2>{masterLabel}: {parent?.name || 'Gebäude Zugang'}</h2>
                   {masterUrl ? (
                     <div style={{ padding: 12, background: 'white' }}>
                       <QRCodeSVG value={masterUrl} size={180} level="H" />
                     </div>
                   ) : (
-                    <Card padding={3} radius={2} tone="caution">
+                    <Card padding={3} radius={2} tone="caution" className="warning-card">
                       <Text size={1}>Bitte zuerst speichern &amp; Slug generieren.</Text>
                     </Card>
                   )}
@@ -227,7 +278,7 @@ export const QRBatchList: UserViewComponent = (props) => {
                       padding={3}
                       radius={2}
                       tone="caution"
-                      className="page-break"
+                      className="page-break warning-card"
                       style={{
                         breakInside: 'avoid',
                         minHeight: 160,
@@ -254,7 +305,7 @@ export const QRBatchList: UserViewComponent = (props) => {
                       padding={3}
                       radius={2}
                       tone="caution"
-                      className="page-break"
+                      className="page-break warning-card"
                       style={{
                         breakInside: 'avoid',
                         minHeight: 160,
@@ -282,7 +333,7 @@ export const QRBatchList: UserViewComponent = (props) => {
                     padding={3}
                     radius={2}
                     tone="default"
-                    className="page-break"
+                    className="page-break qr-card"
                     style={{
                       breakInside: 'avoid',
                       minHeight: 160,
