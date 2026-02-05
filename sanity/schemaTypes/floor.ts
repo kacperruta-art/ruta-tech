@@ -1,5 +1,6 @@
 import { StackIcon } from '@sanity/icons'
 import { defineType, defineField } from 'sanity'
+import { HierarchyBreadcrumbs } from '../components/HierarchyBreadcrumbs'
 
 export const floor = defineType({
   name: 'floor',
@@ -7,6 +8,18 @@ export const floor = defineType({
   type: 'document',
   icon: StackIcon,
   fields: [
+    defineField({
+      name: 'locationContext',
+      title: 'Navigation / Pfad',
+      type: 'string',
+      readOnly: true,
+      components: {
+        input: HierarchyBreadcrumbs,
+      },
+      initialValue: 'Start',
+      description:
+        'Klicken Sie auf die Pfadelemente, um zum übergeordneten Objekt zu springen.',
+    }),
     defineField({
       name: 'name',
       type: 'string',

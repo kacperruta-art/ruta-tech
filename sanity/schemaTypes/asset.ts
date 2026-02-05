@@ -7,6 +7,7 @@ import {
   WarningOutlineIcon,
 } from '@sanity/icons'
 import { defineType, defineField, defineArrayMember } from 'sanity'
+import { HierarchyBreadcrumbs } from '../components/HierarchyBreadcrumbs'
 
 const assetTypeOptions = [
   { title: 'Heizung', value: 'Heating' },
@@ -44,6 +45,19 @@ export const asset = defineType({
     { name: 'techDetails', title: 'Technische Daten', options: { columns: 2 } },
   ],
   fields: [
+    defineField({
+      name: 'locationContext',
+      title: 'Navigation / Pfad',
+      type: 'string',
+      group: 'basis',
+      readOnly: true,
+      components: {
+        input: HierarchyBreadcrumbs,
+      },
+      initialValue: 'Start',
+      description:
+        'Klicken Sie auf die Pfadelemente, um zum übergeordneten Objekt zu springen.',
+    }),
     // --- Group: basis ---
     defineField({
       name: 'name',
