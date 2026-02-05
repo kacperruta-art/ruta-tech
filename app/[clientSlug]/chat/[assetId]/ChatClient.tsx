@@ -8,9 +8,7 @@ type Message = { role: 'user' | 'assistant'; content: string }
 export type AssetHeaderInfo = {
   _id: string
   name?: string
-  locationName?: string
-  buildingName?: string
-  clientSlug?: string
+  context?: string
   mainImage?: { asset?: { url?: string } }
 } | null
 
@@ -75,10 +73,15 @@ export function ChatClient({
   clientSlug,
   assetId,
   asset,
+  title,
+  context,
 }: {
   clientSlug: string
   assetId: string
   asset: AssetHeaderInfo
+  expectedPin?: string
+  title?: string
+  context?: string
 }) {
   const [pin, setPin] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -195,11 +198,9 @@ export function ChatClient({
   }
 
   // --- RENDER STATES (Loading, Not Found, Login) ---
-  const locationName = asset?.locationName || ''
-  const assetName = asset?.name || 'Assistent'
-  const accessTitle = locationName
-    ? `${assetName} · ${locationName}`
-    : assetName
+  const locationName = context || asset?.context || ''
+  const assetName = title || asset?.name || 'Assistent'
+  const accessTitle = locationName ? `${assetName} · ${locationName}` : assetName
 
   const content =
     !hasCheckedStorage ? (

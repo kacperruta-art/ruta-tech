@@ -154,6 +154,23 @@ export const MasterQRView: UserViewComponent = (props) => {
               <div style={{ padding: 16, background: 'white' }}>
                 <QRCodeSVG value={url} size={260} level="H" />
               </div>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'block',
+                  marginTop: 10,
+                  fontSize: 12,
+                  color: 'blue',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  wordBreak: 'break-all',
+                  textAlign: 'center',
+                }}
+              >
+                {url}
+              </a>
               <Text size={2} weight="medium">
                 {data.name || 'Unbenannt'}
               </Text>

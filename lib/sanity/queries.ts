@@ -83,3 +83,33 @@ export const assetPageQuery = groq`*[_type == "asset" && slug.current == $assetI
   },
   "mainImage": mainImage
 }`
+
+// 3. CHAT CONTEXT QUERY (V3 Deep Tree)
+export const chatContextQuery = groq`
+  *[_type in ["building", "floor", "unit", "asset"] && slug.current == $slug][0] {
+    _id,
+    _type,
+    name,
+    "slug": slug.current,
+    
+    // 1. RESOLVE PARENT BUILDING (Source of Truth for PIN & Settings)
+    "building": select(
+      _type == "building" => { _id, name, "pin": pin, "slug": slug.current },
+      _type == "floor" => building->{ _id, name, "pin": pin, "slug": slug.current },
+      _type == "unit" => building->{ _id, name, "pin": pin, "slug": slug.current },
+      _type == "asset" => coalesce(
+        parentUnit->building->{ _id, name, "pin": pin, "slug": slug.current },
+        parentFloor->building->{ _id, name, "pin": pin, "slug": slug.current },
+        parentBuilding->{ _id, name, "pin": pin, "slug": slug.current }
+      )
+    ),
+
+    // 2. RESOLVE CONTEXT (Breadcrumbs for AI)
+    "context": select(
+      _type == "building" => "Building Entry",
+      _type == "floor" => "Floor: " + name,
+      _type == "unit" => "Room: " + name + " (Floor: " + coalesce(floor->name, "Unknown") + ")",
+      _type == "asset" => "Asset: " + name
+    )
+  }
+`;

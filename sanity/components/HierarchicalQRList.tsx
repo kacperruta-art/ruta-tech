@@ -286,6 +286,23 @@ export const HierarchicalQRList: UserViewComponent = (props) => {
         <div style={{ padding: 8, background: 'white' }}>
           <QRCodeSVG value={url} size={110} level="H" />
         </div>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'block',
+            marginTop: 6,
+            fontSize: '0.8rem',
+            color: 'blue',
+            textDecoration: 'underline',
+            cursor: 'pointer',
+            wordBreak: 'break-all',
+            textAlign: 'center',
+          }}
+        >
+          {url}
+        </a>
       </Card>
     )
   }
@@ -316,6 +333,23 @@ export const HierarchicalQRList: UserViewComponent = (props) => {
         <Text size={1} weight="medium" style={{ textAlign: 'center' }}>
           {buildAssetLabel(asset)}
         </Text>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'block',
+            marginTop: 6,
+            fontSize: '0.8rem',
+            color: 'blue',
+            textDecoration: 'underline',
+            cursor: 'pointer',
+            wordBreak: 'break-all',
+            textAlign: 'center',
+          }}
+        >
+          {url}
+        </a>
       </Card>
     )
   }
