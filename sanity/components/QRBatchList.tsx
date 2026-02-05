@@ -22,6 +22,12 @@ interface AssetRow {
   clientSlug?: string | null
 }
 
+interface ParentRow {
+  name?: string | null
+  slug?: string | null
+  clientSlug?: string | null
+}
+
 const buildLabel = (asset: AssetRow) => {
   const parts = [asset.buildingName, asset.floorName, asset.unitName, asset.name]
     .filter((value): value is string => Boolean(value))
@@ -62,6 +68,23 @@ const getAssetsQuery = (level: Level) => {
   }`
 }
 
+const getBuildingBatchQuery = () => `{
+  "parent": *[_id in [$id, $baseId]][0]{
+    name,
+    "slug": slug.current,
+    "clientSlug": client->slug.current
+  },
+  "assets": *[_type == "asset" && building._ref in [$id, $baseId]] | order(name asc){
+    _id,
+    name,
+    "slug": slug.current,
+    "buildingName": building->name,
+    "floorName": parentFloor->name,
+    "unitName": parentUnit->name,
+    "clientSlug": building->client->slug.current
+  }
+}`
+
 function PrintStyles() {
   return (
     <style>
@@ -94,6 +117,7 @@ export const QRBatchList: UserViewComponent = (props) => {
   const level = (options as ViewOptions | undefined)?.level ?? 'building'
 
   const [assets, setAssets] = useState<AssetRow[]>([])
+  const [parent, setParent] = useState<ParentRow | null>(null)
   const [loading, setLoading] = useState(false)
 
   const loadAssets = useCallback(async () => {
@@ -102,10 +126,22 @@ export const QRBatchList: UserViewComponent = (props) => {
     try {
       const id = String(documentId)
       const baseId = id.replace(/^drafts\./, '')
-      const query = getAssetsQuery(level)
-      const result = await client.fetch<AssetRow[]>(query, { id, baseId })
-      setAssets(result || [])
+      if (level === 'building') {
+        const query = getBuildingBatchQuery()
+        const result = await client.fetch<{
+          parent?: ParentRow | null
+          assets?: AssetRow[] | null
+        }>(query, { id, baseId })
+        setParent(result?.parent ?? null)
+        setAssets(result?.assets ?? [])
+      } else {
+        const query = getAssetsQuery(level)
+        const result = await client.fetch<AssetRow[]>(query, { id, baseId })
+        setParent(null)
+        setAssets(result || [])
+      }
     } catch {
+      setParent(null)
       setAssets([])
     } finally {
       setLoading(false)
@@ -128,7 +164,7 @@ export const QRBatchList: UserViewComponent = (props) => {
     )
   }
 
-  if (!assets.length) {
+  if (!assets.length && !(level === 'building' && parent)) {
     return (
       <Card padding={4} radius={2} tone="default">
         <Text muted>Keine Assets gefunden.</Text>
@@ -136,12 +172,46 @@ export const QRBatchList: UserViewComponent = (props) => {
     )
   }
 
+  const renderMasterCard = level === 'building' && parent
+  const masterUrl =
+    parent?.slug && parent?.clientSlug
+      ? `${BASE_URL}/${parent.clientSlug}/chat/${parent.slug}`
+      : ''
+
   return (
     <>
       <PrintStyles />
       <Card padding={4} radius={2} tone="default">
         <Flex direction="column" gap={4}>
           <div className="qr-print-container">
+            {renderMasterCard && (
+              <Card
+                padding={4}
+                radius={2}
+                tone="default"
+                className="page-break"
+                style={{
+                  gridColumn: '1 / -1',
+                  border: '2px solid #111827',
+                  background: '#f9fafb',
+                }}
+              >
+                <Flex align="center" direction="column" gap={3}>
+                  <Text size={2} weight="semibold">
+                    HAUPT-QR-CODE: {parent?.name || 'Gebäude Zugang'}
+                  </Text>
+                  {masterUrl ? (
+                    <div style={{ padding: 12, background: 'white' }}>
+                      <QRCodeSVG value={masterUrl} size={180} level="H" />
+                    </div>
+                  ) : (
+                    <Card padding={3} radius={2} tone="caution">
+                      <Text size={1}>Bitte zuerst speichern &amp; Slug generieren.</Text>
+                    </Card>
+                  )}
+                </Flex>
+              </Card>
+            )}
             <Grid columns={[2, 3, 4]} gap={3}>
               {assets.map((asset) => {
                 if (!asset.slug) {
