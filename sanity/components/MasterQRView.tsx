@@ -15,6 +15,7 @@ type SupportedType = 'building' | 'floor' | 'unit'
 interface MasterData {
   name?: string | null
   slug?: string | null
+  publishedSlug?: string | null
   clientSlug?: string | null
 }
 
@@ -23,13 +24,15 @@ const getQueryForType = (type: SupportedType) => {
     return `*[_id in [$id, $baseId]][0]{
       name,
       "slug": slug.current,
-      "clientSlug": client->slug.current
+      "clientSlug": client->slug.current,
+      "publishedSlug": *[_id == $baseId][0].slug.current
     }`
   }
   return `*[_id in [$id, $baseId]][0]{
     name,
     "slug": slug.current,
-    "clientSlug": building->client->slug.current
+    "clientSlug": building->client->slug.current,
+    "publishedSlug": *[_id == $baseId][0].slug.current
   }`
 }
 
@@ -96,10 +99,12 @@ export const MasterQRView: UserViewComponent = (props) => {
     loadData()
   }, [loadData])
 
+  const resolvedSlug = data?.slug || data?.publishedSlug || ''
+
   const url = useMemo(() => {
-    if (!data?.slug || !data?.clientSlug) return ''
-    return `${BASE_URL}/${data.clientSlug}/chat/${data.slug}`
-  }, [data?.clientSlug, data?.slug])
+    if (!resolvedSlug || !data?.clientSlug) return ''
+    return `${BASE_URL}/${data.clientSlug}/chat/${resolvedSlug}`
+  }, [data?.clientSlug, resolvedSlug])
 
   if (loading) {
     return (
@@ -117,10 +122,13 @@ export const MasterQRView: UserViewComponent = (props) => {
     )
   }
 
-  if (!data.slug) {
+  if (!resolvedSlug) {
     return (
       <Card padding={4} radius={2} tone="caution" className="no-print">
-        <Text>Draft/Missing Slug – bitte zuerst speichern.</Text>
+        <Text>
+          ⚠️ Kein Link generiert. Bitte im Tab &apos;Editor&apos; auf
+          &apos;Generate&apos; beim Slug klicken und veröffentlichen.
+        </Text>
       </Card>
     )
   }

@@ -18,6 +18,22 @@ export const unit = defineType({
       title: 'Tenant Name',
     }),
     defineField({
+      name: 'building',
+      title: 'Gehört zu Gebäude',
+      type: 'reference',
+      to: [{ type: 'building' }],
+      readOnly: true,
+      hidden: false,
+    }),
+    defineField({
+      name: 'floor',
+      title: 'Gehört zu Ebene',
+      type: 'reference',
+      to: [{ type: 'floor' }],
+      readOnly: true,
+      hidden: false,
+    }),
+    defineField({
       name: 'parentFloor',
       type: 'reference',
       to: [{ type: 'floor' }],
