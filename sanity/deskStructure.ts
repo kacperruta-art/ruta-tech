@@ -38,6 +38,15 @@ const buildingChildrenView = (S: StructureBuilder, buildingId: string) =>
             .initialValueTemplates([
               S.initialValueTemplateItem('asset-by-building', { buildingId }),
             ])
+            .child((assetId) =>
+              S.document()
+                .documentId(assetId)
+                .schemaType('asset')
+                .views([
+                  S.view.form(),
+                  S.view.component(AssetQRView).title('QR Code'),
+                ])
+            )
         ),
     ])
 
@@ -48,7 +57,18 @@ const buildingView = (S: StructureBuilder, buildingId: string) =>
       S.listItem()
         .title('Gebäude bearbeiten')
         .icon(EditIcon)
-        .child(S.document().schemaType('building').documentId(buildingId)),
+        .child(
+          S.document()
+            .schemaType('building')
+            .documentId(buildingId)
+            .views([
+              S.view.form(),
+              S.view
+                .component(QRBatchList)
+                .title('QR Codes (Drucken)')
+                .options({ level: 'building' }),
+            ])
+        ),
       S.listItem()
         .title('Gebäude Inhalt')
         .child(buildingChildrenView(S, buildingId)),
@@ -86,6 +106,15 @@ const floorChildrenView = (
             .initialValueTemplates([
               S.initialValueTemplateItem('asset-by-floor', { buildingId, floorId }),
             ])
+            .child((assetId) =>
+              S.document()
+                .documentId(assetId)
+                .schemaType('asset')
+                .views([
+                  S.view.form(),
+                  S.view.component(AssetQRView).title('QR Code'),
+                ])
+            )
         ),
     ])
 
@@ -100,7 +129,18 @@ const floorView = (
       S.listItem()
         .title('Ebene bearbeiten')
         .icon(EditIcon)
-        .child(S.document().schemaType('floor').documentId(floorId)),
+        .child(
+          S.document()
+            .schemaType('floor')
+            .documentId(floorId)
+            .views([
+              S.view.form(),
+              S.view
+                .component(QRBatchList)
+                .title('QR Codes (Ebene)')
+                .options({ level: 'floor' }),
+            ])
+        ),
       S.listItem()
         .title('Ebene Inhalt')
         .child(floorChildrenView(S, buildingId, floorId)),
@@ -129,6 +169,15 @@ const unitChildrenView = (
                 unitId,
               }),
             ])
+            .child((assetId) =>
+              S.document()
+                .documentId(assetId)
+                .schemaType('asset')
+                .views([
+                  S.view.form(),
+                  S.view.component(AssetQRView).title('QR Code'),
+                ])
+            )
         ),
     ])
 
@@ -144,7 +193,18 @@ const unitView = (
       S.listItem()
         .title('Einheit bearbeiten')
         .icon(EditIcon)
-        .child(S.document().schemaType('unit').documentId(unitId)),
+        .child(
+          S.document()
+            .schemaType('unit')
+            .documentId(unitId)
+            .views([
+              S.view.form(),
+              S.view
+                .component(QRBatchList)
+                .title('QR Codes (Raum)')
+                .options({ level: 'unit' }),
+            ])
+        ),
       S.listItem()
         .title('Einheit Inhalt')
         .child(unitChildrenView(S, buildingId, floorId, unitId)),
