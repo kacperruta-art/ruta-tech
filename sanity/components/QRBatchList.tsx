@@ -3,7 +3,7 @@
 import { Button, Card, Flex, Grid, Text } from '@sanity/ui'
 import { useClient } from 'sanity'
 import { QRCodeSVG } from 'qrcode.react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { UserViewComponent } from 'sanity/structure'
 
 import { apiVersion } from '@/sanity/env'
@@ -12,26 +12,20 @@ const BASE_URL = 'https://immo.ruta-tech.ch'
 
 type Level = 'building' | 'floor' | 'unit'
 
-type AssetRow = {
+interface AssetRow {
   _id: string
-  name?: string
-  slug?: string
-  buildingName?: string
-  floorName?: string
-  unitName?: string
-  clientSlug?: string
+  name?: string | null
+  slug?: string | null
+  buildingName?: string | null
+  floorName?: string | null
+  unitName?: string | null
+  clientSlug?: string | null
 }
 
-type QrCard = AssetRow & { url: string; label: string }
-
 const buildLabel = (asset: AssetRow) => {
-  const parts = [
-    asset.buildingName,
-    asset.floorName,
-    asset.unitName,
-    asset.name,
-  ].filter(Boolean)
-  return parts.join(' | ')
+  const parts = [asset.buildingName, asset.floorName, asset.unitName, asset.name]
+    .filter((value): value is string => Boolean(value))
+  return parts.length ? parts.join(' | ') : 'Asset'
 }
 
 const getAssetsQuery = (level: Level) => {
@@ -73,20 +67,19 @@ function PrintStyles() {
     <style>
       {`
         @media print {
-          * { visibility: hidden; }
-          .qr-print-area, .qr-print-area * { visibility: visible; }
-          .qr-print-area {
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            min-height: 100% !important;
-            background: white !important;
-            overflow: auto !important;
-            z-index: 2147483647 !important;
-            padding: 24px !important;
+          body > :not(.qr-print-container),
+          nav, header, aside, button { display: none !important; }
+          .qr-print-container {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr);
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: white;
+            z-index: 9999;
           }
-          .no-print { display: none !important; }
+          .page-break { page-break-inside: avoid; }
         }
       `}
     </style>
@@ -127,18 +120,6 @@ export const QRBatchList: UserViewComponent = (props) => {
     window.print()
   }, [])
 
-  const cards = useMemo(() => {
-    return assets.reduce<QrCard[]>((acc, asset) => {
-      if (!asset.slug || !asset.clientSlug) return acc
-      acc.push({
-        ...asset,
-        url: `${BASE_URL}/${asset.clientSlug}/chat/${asset.slug}`,
-        label: buildLabel(asset),
-      })
-      return acc
-    }, [])
-  }, [assets])
-
   if (loading) {
     return (
       <Card padding={4} radius={2} tone="default">
@@ -147,7 +128,7 @@ export const QRBatchList: UserViewComponent = (props) => {
     )
   }
 
-  if (!cards.length) {
+  if (!assets.length) {
     return (
       <Card padding={4} radius={2} tone="default">
         <Text muted>Keine Assets gefunden.</Text>
@@ -160,33 +141,92 @@ export const QRBatchList: UserViewComponent = (props) => {
       <PrintStyles />
       <Card padding={4} radius={2} tone="default">
         <Flex direction="column" gap={4}>
-          <div className="qr-print-area">
+          <div className="qr-print-container">
             <Grid columns={[2, 3, 4]} gap={3}>
-              {cards.map((asset) => (
-                <Card
-                  key={asset._id}
-                  padding={3}
-                  radius={2}
-                  tone="default"
-                  style={{
-                    breakInside: 'avoid',
-                    minHeight: 160,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Flex align="center" direction="column" gap={2}>
-                    <div style={{ padding: 8, background: 'white' }}>
-                      <QRCodeSVG value={asset.url} size={120} level="H" />
-                    </div>
-                    <Text size={1} weight="medium" style={{ textAlign: 'center' }}>
-                      {asset.label}
-                    </Text>
-                  </Flex>
-                </Card>
-              ))}
+              {assets.map((asset) => {
+                if (!asset.slug) {
+                  return (
+                    <Card
+                      key={asset._id}
+                      padding={3}
+                      radius={2}
+                      tone="caution"
+                      className="page-break"
+                      style={{
+                        breakInside: 'avoid',
+                        minHeight: 160,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text size={1} weight="medium" style={{ textAlign: 'center' }}>
+                        Bitte zuerst speichern &amp; Slug generieren.
+                      </Text>
+                      <Text size={1} muted style={{ textAlign: 'center' }}>
+                        {asset.name || 'Asset'}
+                      </Text>
+                    </Card>
+                  )
+                }
+
+                if (!asset.clientSlug) {
+                  return (
+                    <Card
+                      key={asset._id}
+                      padding={3}
+                      radius={2}
+                      tone="caution"
+                      className="page-break"
+                      style={{
+                        breakInside: 'avoid',
+                        minHeight: 160,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text size={1} weight="medium" style={{ textAlign: 'center' }}>
+                        Mandant mit Slug fehlt.
+                      </Text>
+                      <Text size={1} muted style={{ textAlign: 'center' }}>
+                        {asset.name || 'Asset'}
+                      </Text>
+                    </Card>
+                  )
+                }
+
+                const url = `${BASE_URL}/${asset.clientSlug}/chat/${asset.slug}`
+                const label = buildLabel(asset)
+                return (
+                  <Card
+                    key={asset._id}
+                    padding={3}
+                    radius={2}
+                    tone="default"
+                    className="page-break"
+                    style={{
+                      breakInside: 'avoid',
+                      minHeight: 160,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Flex align="center" direction="column" gap={2}>
+                      <div style={{ padding: 8, background: 'white' }}>
+                        <QRCodeSVG value={url} size={120} level="H" />
+                      </div>
+                      <Text size={1} weight="medium" style={{ textAlign: 'center' }}>
+                        {label}
+                      </Text>
+                    </Flex>
+                  </Card>
+                )
+              })}
             </Grid>
           </div>
           <Button

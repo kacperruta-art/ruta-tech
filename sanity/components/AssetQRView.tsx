@@ -20,25 +20,21 @@ const ASSET_QUERY = `*[_id == $documentId][0]{
   "clientSlug": building->client->slug.current
 }`
 
-type AssetResult = {
+interface AssetData {
   _id?: string
-  name?: string
-  slug?: string
-  buildingName?: string
-  floorName?: string
-  unitName?: string
-  clientSlug?: string
-} | null
+  name?: string | null
+  slug?: string | null
+  buildingName?: string | null
+  floorName?: string | null
+  unitName?: string | null
+  clientSlug?: string | null
+}
 
-const buildLabel = (asset: AssetResult) => {
-  if (!asset) return ''
-  const parts = [
-    asset.buildingName,
-    asset.floorName,
-    asset.unitName,
-    asset.name,
-  ].filter(Boolean)
-  return parts.join(' | ')
+const buildLabel = (asset: AssetData | null) => {
+  if (!asset) return 'Asset'
+  const parts = [asset.buildingName, asset.floorName, asset.unitName, asset.name]
+    .filter((value): value is string => Boolean(value))
+  return parts.length ? parts.join(' | ') : 'Asset'
 }
 
 function PrintStyles() {
@@ -69,14 +65,14 @@ export const AssetQRView: UserViewComponent = (props) => {
   const { documentId } = props
   const client = useClient({ apiVersion })
 
-  const [asset, setAsset] = useState<AssetResult>(null)
+  const [asset, setAsset] = useState<AssetData | null>(null)
   const [loading, setLoading] = useState(false)
 
   const loadAsset = useCallback(async () => {
     if (!documentId) return
     setLoading(true)
     try {
-      const result = await client.fetch<AssetResult>(ASSET_QUERY, {
+      const result = await client.fetch<AssetData | null>(ASSET_QUERY, {
         documentId: String(documentId),
       })
       setAsset(result)
@@ -110,12 +106,30 @@ export const AssetQRView: UserViewComponent = (props) => {
     )
   }
 
-  if (!asset || !chatUrl) {
+  if (!asset) {
     return (
       <Card padding={4} radius={2} tone="caution">
         <Text>
-          QR Code kann nicht angezeigt werden. Prüfe, ob das Asset einen Slug
-          hat und dem Gebäude ein Mandant mit Slug zugewiesen ist.
+          QR Code kann nicht angezeigt werden. Asset-Daten fehlen.
+        </Text>
+      </Card>
+    )
+  }
+
+  if (!asset.slug) {
+    return (
+      <Card padding={4} radius={2} tone="caution">
+        <Text>Bitte zuerst speichern &amp; Slug generieren.</Text>
+      </Card>
+    )
+  }
+
+  if (!asset.clientSlug) {
+    return (
+      <Card padding={4} radius={2} tone="caution">
+        <Text>
+          QR Code kann nicht angezeigt werden. Bitte Mandant mit Slug am Gebäude
+          zuweisen.
         </Text>
       </Card>
     )
