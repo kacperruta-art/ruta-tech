@@ -47,7 +47,7 @@ export const asset = defineType({
   fields: [
     defineField({
       name: 'locationContext',
-      title: 'Navigation',
+      title: ' ',
       type: 'string',
       group: 'basis',
       hidden: false,

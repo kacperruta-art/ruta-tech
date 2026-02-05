@@ -10,7 +10,7 @@ export const unit = defineType({
   fields: [
     defineField({
       name: 'locationContext',
-      title: 'Navigation',
+      title: ' ',
       type: 'string',
       hidden: false,
       components: {
