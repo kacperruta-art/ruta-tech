@@ -90,19 +90,34 @@ function PrintStyles() {
     <style>
       {`
         @media print {
-          body > :not(.qr-print-container),
-          nav, header, aside, button { display: none !important; }
-          .qr-print-container {
+          body * {
+            visibility: hidden;
+          }
+          .qr-print-wrapper,
+          .qr-print-wrapper * {
+            visibility: visible;
+          }
+          .qr-print-wrapper {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 20px;
+            background: white;
+          }
+          .master-qr-section {
+            page-break-inside: avoid;
+            margin-bottom: 40px;
+            text-align: center;
+            border: 2px solid #000;
+            padding: 20px;
+          }
+          .qr-grid {
             display: grid !important;
             grid-template-columns: repeat(2, 1fr);
-            width: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            background: white;
-            z-index: 9999;
+            gap: 20px;
           }
-          .page-break { page-break-inside: avoid; }
         }
       `}
     </style>
@@ -183,19 +198,9 @@ export const QRBatchList: UserViewComponent = (props) => {
       <PrintStyles />
       <Card padding={4} radius={2} tone="default">
         <Flex direction="column" gap={4}>
-          <div className="qr-print-container">
+          <div className="qr-print-wrapper">
             {renderMasterCard && (
-              <Card
-                padding={4}
-                radius={2}
-                tone="default"
-                className="page-break"
-                style={{
-                  gridColumn: '1 / -1',
-                  border: '2px solid #111827',
-                  background: '#f9fafb',
-                }}
-              >
+              <div className="master-qr-section">
                 <Flex align="center" direction="column" gap={3}>
                   <Text size={2} weight="semibold">
                     HAUPT-QR-CODE: {parent?.name || 'Gebäude Zugang'}
@@ -210,9 +215,10 @@ export const QRBatchList: UserViewComponent = (props) => {
                     </Card>
                   )}
                 </Flex>
-              </Card>
+              </div>
             )}
-            <Grid columns={[2, 3, 4]} gap={3}>
+            {renderMasterCard && <hr />}
+            <div className="qr-grid">
               {assets.map((asset) => {
                 if (!asset.slug) {
                   return (
@@ -297,7 +303,7 @@ export const QRBatchList: UserViewComponent = (props) => {
                   </Card>
                 )
               })}
-            </Grid>
+            </div>
           </div>
           <Button
             className="no-print"
