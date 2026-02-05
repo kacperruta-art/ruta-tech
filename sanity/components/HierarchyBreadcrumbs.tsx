@@ -13,17 +13,22 @@ type ResolvedNode = {
   type: 'client' | 'building' | 'floor' | 'unit'
 }
 
-type FetchedNode = {
-  name?: string | null
-  title?: string | null
-  clientName?: string | null
-  clientId?: string | null
+type ClientNode = { _id?: string | null; name?: string | null }
+type BuildingNode = { _id?: string | null; name?: string | null; client?: ClientNode | null }
+type FloorNode = { _id?: string | null; name?: string | null; building?: BuildingNode | null }
+type UnitNode = { _id?: string | null; name?: string | null; floor?: FloorNode | null; building?: BuildingNode | null }
+
+type ResolvedHierarchy = {
+  client?: ClientNode | null
+  building?: BuildingNode | null
+  floor?: FloorNode | null
+  unit?: UnitNode | null
 }
 
 const apiVersion = '2024-01-01'
 
-const labelFromNode = (node?: FetchedNode | null, fallback = 'Unknown') =>
-  node?.name?.trim() || node?.title?.trim() || fallback
+const labelFromNode = (name?: string | null, fallback = 'Unknown') =>
+  name?.trim() || fallback
 
 export function HierarchyBreadcrumbs(_props: InputProps) {
   const client = useClient({ apiVersion })
@@ -36,119 +41,129 @@ export function HierarchyBreadcrumbs(_props: InputProps) {
     useFormValue(['parentFloor'])) as ReferenceValue
   const unit = (useFormValue(['unit']) ||
     useFormValue(['parentUnit'])) as ReferenceValue
+  const parentUnit = useFormValue(['parentUnit']) as ReferenceValue
+  const parentFloor = useFormValue(['parentFloor']) as ReferenceValue
 
-  const [buildingNode, setBuildingNode] = useState<FetchedNode | null>(null)
-  const [floorNode, setFloorNode] = useState<FetchedNode | null>(null)
-  const [unitNode, setUnitNode] = useState<FetchedNode | null>(null)
-  const [clientNode, setClientNode] = useState<FetchedNode | null>(null)
+  const [resolved, setResolved] = useState<ResolvedHierarchy>({})
 
   useEffect(() => {
     const load = async () => {
       const queries: Array<Promise<void>> = []
 
-      if (building?._ref) {
+      const unitRef = parentUnit?._ref || unit?._ref
+      const floorRef = parentFloor?._ref || floor?._ref
+      const buildingRef = building?._ref
+
+      if (unitRef) {
         queries.push(
           client
-            .fetch<FetchedNode>(
-              `*[_id == $id][0]{ name, title, "clientName": client->name }`,
-              { id: building._ref }
+            .fetch<UnitNode>(
+              `*[_id == $id][0]{
+                _id,
+                name,
+                floor->{ _id, name, "building": building->{ _id, name, "client": client->{ _id, name } } },
+                "building": building->{ _id, name, "client": client->{ _id, name } }
+              }`,
+              { id: unitRef }
             )
-            .then((result) => setBuildingNode(result ?? null))
-            .catch(() => setBuildingNode(null))
+            .then((result) => {
+              const unitNode = result ?? null
+              const floorNode = unitNode?.floor ?? null
+              const buildingNode = floorNode?.building ?? unitNode?.building ?? null
+              const clientNode = buildingNode?.client ?? null
+              setResolved({
+                unit: unitNode,
+                floor: floorNode,
+                building: buildingNode,
+                client: clientNode,
+              })
+            })
+            .catch(() => setResolved({}))
         )
+      } else if (floorRef) {
         queries.push(
           client
-            .fetch<FetchedNode>(
-              `*[_id == $id][0]{ "clientName": client->name, "clientId": client->_id }`,
-              { id: building._ref }
+            .fetch<FloorNode>(
+              `*[_id == $id][0]{
+                _id,
+                name,
+                "building": building->{ _id, name, "client": client->{ _id, name } }
+              }`,
+              { id: floorRef }
             )
-            .then((result) => setClientNode(result ?? null))
-            .catch(() => setClientNode(null))
+            .then((result) => {
+              const floorNode = result ?? null
+              const buildingNode = floorNode?.building ?? null
+              const clientNode = buildingNode?.client ?? null
+              setResolved({
+                floor: floorNode,
+                building: buildingNode,
+                client: clientNode,
+              })
+            })
+            .catch(() => setResolved({}))
+        )
+      } else if (buildingRef) {
+        queries.push(
+          client
+            .fetch<BuildingNode>(
+              `*[_id == $id][0]{ _id, name, "client": client->{ _id, name } }`,
+              { id: buildingRef }
+            )
+            .then((result) => {
+              const buildingNode = result ?? null
+              const clientNode = buildingNode?.client ?? null
+              setResolved({ building: buildingNode, client: clientNode })
+            })
+            .catch(() => setResolved({}))
         )
       } else {
-        setBuildingNode(null)
-        setClientNode(null)
+        setResolved({})
       }
 
-      if (floor?._ref) {
-        queries.push(
-          client
-            .fetch<FetchedNode>(
-              `*[_id == $id][0]{ name, title }`,
-              { id: floor._ref }
-            )
-            .then((result) => setFloorNode(result ?? null))
-            .catch(() => setFloorNode(null))
-        )
-      } else {
-        setFloorNode(null)
-      }
-
-      if (unit?._ref) {
-        queries.push(
-          client
-            .fetch<FetchedNode>(
-              `*[_id == $id][0]{ name, title }`,
-              { id: unit._ref }
-            )
-            .then((result) => setUnitNode(result ?? null))
-            .catch(() => setUnitNode(null))
-        )
-      } else {
-        setUnitNode(null)
-      }
-
-      if (queries.length) {
-        await Promise.all(queries)
-      }
+      if (queries.length) await Promise.all(queries)
     }
 
     load()
-  }, [building?._ref, client, floor?._ref, unit?._ref])
+  }, [building?._ref, client, floor?._ref, parentFloor?._ref, parentUnit?._ref, unit?._ref])
 
   const crumbs = useMemo(() => {
     const chain: ResolvedNode[] = []
-    const clientName = clientNode?.clientName
-    const clientId = (clientNode as { clientId?: string })?.clientId
 
-    if (clientName) {
+    if (resolved.client?._id) {
       chain.push({
-        id: clientId || '',
-        label: clientName,
+        id: resolved.client._id,
+        label: labelFromNode(resolved.client.name, 'Unknown'),
         type: 'client',
       })
     }
 
-    if (building?._ref) {
+    if (resolved.building?._id) {
       chain.push({
-        id: building._ref,
-        label: labelFromNode(buildingNode, 'Unknown'),
+        id: resolved.building._id,
+        label: labelFromNode(resolved.building.name, 'Unknown'),
         type: 'building',
       })
     }
 
-    if (type === 'asset' || type === 'unit' || type === 'floor') {
-      if (type !== 'floor' && floor?._ref) {
-        chain.push({
-          id: floor._ref,
-          label: labelFromNode(floorNode, 'Unknown'),
-          type: 'floor',
-        })
-      }
+    if ((type === 'asset' || type === 'unit' || type === 'floor') && resolved.floor?._id) {
+      chain.push({
+        id: resolved.floor._id,
+        label: labelFromNode(resolved.floor.name, 'Unknown'),
+        type: 'floor',
+      })
     }
 
-    if (type === 'asset' || type === 'unit') {
-      if (unit?._ref) {
-        chain.push({
-          id: unit._ref,
-          label: labelFromNode(unitNode, 'Unknown'),
-          type: 'unit',
-        })
-      }
+    if ((type === 'asset' || type === 'unit') && resolved.unit?._id) {
+      chain.push({
+        id: resolved.unit._id,
+        label: labelFromNode(resolved.unit.name, 'Unknown'),
+        type: 'unit',
+      })
     }
 
     return chain
-  }, [building?._ref, buildingNode, floor?._ref, floorNode, type, unit?._ref, unitNode])
+  }, [resolved, type])
 
   const currentLabel = currentName?.trim() || 'Unknown'
 
