@@ -24,7 +24,7 @@ export const floor = defineType({
       title: 'Gebäudeteil',
     }),
     defineField({
-      name: 'Gebäudeteil',
+      name: 'gebaeudeteil',
       title: 'Gebäudeteil (Bereich)',
       type: 'string',
       description: 'z.B. Waschraum, Technikraum, Allgemein',
