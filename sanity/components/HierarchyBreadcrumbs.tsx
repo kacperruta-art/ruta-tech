@@ -1,6 +1,6 @@
 'use client'
 
-import { Card, Flex, Text } from '@sanity/ui'
+import { Flex, Text } from '@sanity/ui'
 import { IntentLink } from 'sanity/router'
 import { useFormValue, type InputProps } from 'sanity'
 
@@ -9,142 +9,112 @@ type ReferenceValue = {
   name?: string
 } | null
 
-type BreadcrumbItem = {
+type Crumb = {
   id?: string
   label: string
   type?: string
   isCurrent?: boolean
 }
 
-const getLabel = (fallback: string, value?: ReferenceValue) => {
+const labelOrUnknown = (value?: string | null) => value?.trim() || 'Unknown'
+
+const resolveLabel = (fallback: string, value?: ReferenceValue) => {
   if (!value) return fallback
   if (value.name) return value.name
   if (value._ref) return `${fallback} (${value._ref.slice(0, 6)})`
   return fallback
 }
 
-const buildBreadcrumbs = ({
-  type,
-  name,
-  building,
-  floor,
-  unit,
-  parentFloor,
-  parentUnit,
-}: {
-  type?: string
-  name?: string
-  building?: ReferenceValue
-  floor?: ReferenceValue
-  unit?: ReferenceValue
-  parentFloor?: ReferenceValue
-  parentUnit?: ReferenceValue
-}) => {
-  const currentLabel = name || 'Aktuelles Dokument'
+export function HierarchyBreadcrumbs(_props: InputProps) {
+  const type = useFormValue(['_type']) as string | undefined
+  const name = useFormValue(['name']) as string | undefined
+  const building = (useFormValue(['building']) ||
+    useFormValue(['parentBuilding'])) as ReferenceValue
+  const floor = (useFormValue(['floor']) ||
+    useFormValue(['parentFloor'])) as ReferenceValue
+  const unit = (useFormValue(['unit']) ||
+    useFormValue(['parentUnit'])) as ReferenceValue
+
+  const crumbs: Crumb[] = []
 
   if (type === 'asset') {
-    return [
-      {
-        id: building?._ref,
-        label: getLabel('Gebäude', building),
+    if (building?._ref) {
+      crumbs.push({
+        id: building._ref,
         type: 'building',
-      },
-      {
-        id: (parentFloor?._ref || floor?._ref),
-        label: getLabel('Ebene', parentFloor || floor),
+        label: resolveLabel('Gebäude', building),
+      })
+    }
+    if (floor?._ref) {
+      crumbs.push({
+        id: floor._ref,
         type: 'floor',
-      },
-      {
-        id: (parentUnit?._ref || unit?._ref),
-        label: getLabel('Einheit', parentUnit || unit),
+        label: resolveLabel('Ebene', floor),
+      })
+    }
+    if (unit?._ref) {
+      crumbs.push({
+        id: unit._ref,
         type: 'unit',
-      },
-      { label: currentLabel, isCurrent: true },
-    ].filter((item, index, arr) =>
-      item.isCurrent ? true : Boolean(item.id || (index === 0 && arr.length))
-    )
+        label: resolveLabel('Einheit', unit),
+      })
+    }
   }
 
   if (type === 'unit') {
-    return [
-      {
-        id: building?._ref,
-        label: getLabel('Gebäude', building),
+    if (building?._ref) {
+      crumbs.push({
+        id: building._ref,
         type: 'building',
-      },
-      {
-        id: floor?._ref,
-        label: getLabel('Ebene', floor),
+        label: resolveLabel('Gebäude', building),
+      })
+    }
+    if (floor?._ref) {
+      crumbs.push({
+        id: floor._ref,
         type: 'floor',
-      },
-      { label: currentLabel, isCurrent: true },
-    ].filter((item, index, arr) =>
-      item.isCurrent ? true : Boolean(item.id || (index === 0 && arr.length))
-    )
+        label: resolveLabel('Ebene', floor),
+      })
+    }
   }
 
   if (type === 'floor') {
-    return [
-      {
-        id: building?._ref,
-        label: getLabel('Gebäude', building),
+    if (building?._ref) {
+      crumbs.push({
+        id: building._ref,
         type: 'building',
-      },
-      { label: currentLabel, isCurrent: true },
-    ].filter((item, index, arr) =>
-      item.isCurrent ? true : Boolean(item.id || (index === 0 && arr.length))
-    )
+        label: resolveLabel('Gebäude', building),
+      })
+    }
   }
 
-  return [{ label: currentLabel, isCurrent: true }]
-}
-
-export function HierarchyBreadcrumbs(props: InputProps) {
-  const type = useFormValue(['_type']) as string | undefined
-  const name = useFormValue(['name']) as string | undefined
-  const building = useFormValue(['building']) as ReferenceValue
-  const floor = useFormValue(['floor']) as ReferenceValue
-  const unit = useFormValue(['unit']) as ReferenceValue
-  const parentFloor = useFormValue(['parentFloor']) as ReferenceValue
-  const parentUnit = useFormValue(['parentUnit']) as ReferenceValue
-
-  const breadcrumbs = buildBreadcrumbs({
-    type,
-    name,
-    building,
-    floor,
-    unit,
-    parentFloor,
-    parentUnit,
+  crumbs.push({
+    label: labelOrUnknown(name),
+    isCurrent: true,
   })
 
   return (
-    <Flex direction="column" gap={3}>
-      <Card padding={3} radius={2} tone="transparent" border>
-        <Flex align="center" gap={2} wrap="wrap">
-          {breadcrumbs.map((item, index) => (
-            <Flex key={`${item.label}-${index}`} align="center" gap={2}>
-              {item.isCurrent || !item.id || !item.type ? (
-                <Text size={1} weight={item.isCurrent ? 'semibold' : 'regular'}>
-                  {item.label}
-                </Text>
-              ) : (
-                <IntentLink intent="edit" params={{ id: item.id, type: item.type }}>
-                  <Text size={1} weight="semibold" style={{ color: '#555' }}>
-                    {item.label}
-                  </Text>
-                </IntentLink>
-              )}
-              {index < breadcrumbs.length - 1 && (
-                <Text size={1} style={{ color: '#999' }}>
-                  →
-                </Text>
-              )}
-            </Flex>
-          ))}
+    <Flex align="center" gap={2} paddingBottom={3} wrap="wrap">
+      {crumbs.map((crumb, index) => (
+        <Flex key={`${crumb.label}-${index}`} align="center" gap={2}>
+          {crumb.isCurrent || !crumb.id ? (
+            <Text size={1} weight="semibold">
+              {labelOrUnknown(crumb.label)}
+            </Text>
+          ) : (
+            <IntentLink intent="edit" params={{ id: crumb.id, type: crumb.type }}>
+              <Text size={1} style={{ cursor: 'pointer', color: '#2276fc' }}>
+                {labelOrUnknown(crumb.label)}
+              </Text>
+            </IntentLink>
+          )}
+          {index < crumbs.length - 1 && (
+            <Text size={1} muted>
+              {'>'}
+            </Text>
+          )}
         </Flex>
-      </Card>
-      {props.renderDefault(props)}
+      ))}
     </Flex>
   )
 }
