@@ -2,7 +2,7 @@
 
 import { Card, Flex, Text } from '@sanity/ui'
 import { IntentLink } from 'sanity/router'
-import { useFormValue, type RenderInputProps } from 'sanity'
+import { useFormValue, type InputProps } from 'sanity'
 
 type ReferenceValue = {
   _ref?: string
@@ -99,7 +99,7 @@ const buildBreadcrumbs = ({
   return [{ label: currentLabel, isCurrent: true }]
 }
 
-export function HierarchyBreadcrumbs(props: RenderInputProps) {
+export function HierarchyBreadcrumbs(props: InputProps) {
   const type = useFormValue(['_type']) as string | undefined
   const name = useFormValue(['name']) as string | undefined
   const building = useFormValue(['building']) as ReferenceValue
