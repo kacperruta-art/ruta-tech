@@ -13,6 +13,38 @@ export const floor = defineType({
       title: 'Name',
     }),
     defineField({
+      name: 'slug',
+      title: 'Slug',
+      type: 'slug',
+      options: {
+        source: 'name',
+        maxLength: 96,
+      },
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'level',
+      title: 'Etagen-Nummer (Logik)',
+      type: 'number',
+      description:
+        'z.B. -1 für Keller, 0 für EG, 1 für 1. Stock. Wichtig für die Sortierung.',
+      initialValue: 0,
+    }),
+    defineField({
+      name: 'building',
+      title: 'Gehört zu Gebäude',
+      type: 'reference',
+      to: [{ type: 'building' }],
+      readOnly: true,
+    }),
+    defineField({
+      name: 'description',
+      title: 'Beschreibung (Intern)',
+      type: 'text',
+      rows: 3,
+      description: 'Zusätzliche Infos für das AI-System (z.B. "Hauptzugang zur Technik")',
+    }),
+    defineField({
       name: 'parentBuilding',
       type: 'reference',
       to: [{ type: 'building' }],
