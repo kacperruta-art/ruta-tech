@@ -5,7 +5,8 @@ import type {
 import { EditIcon } from '@sanity/icons'
 
 import { AssetQRView } from './components/AssetQRView'
-import { QRBatchList } from './components/QRBatchList'
+import { HierarchicalQRList } from './components/HierarchicalQRList'
+import { MasterQRView } from './components/MasterQRView'
 
 // https://www.sanity.io/docs/structure-builder-cheat-sheet
 type StructureBuilder = Parameters<StructureResolver>[0]
@@ -63,9 +64,10 @@ const buildingView = (S: StructureBuilder, buildingId: string) =>
             .documentId(buildingId)
             .views([
               S.view.form(),
+              S.view.component(MasterQRView).title('Stamm-QR (Main)'),
               S.view
-                .component(QRBatchList)
-                .title('QR Codes (Drucken)')
+                .component(HierarchicalQRList)
+                .title('Katalog QR (Struktur)')
                 .options({ level: 'building' }),
             ])
         ),
@@ -135,9 +137,10 @@ const floorView = (
             .documentId(floorId)
             .views([
               S.view.form(),
+              S.view.component(MasterQRView).title('Stamm-QR (Main)'),
               S.view
-                .component(QRBatchList)
-                .title('QR Codes (Ebene)')
+                .component(HierarchicalQRList)
+                .title('Katalog QR (Struktur)')
                 .options({ level: 'floor' }),
             ])
         ),
@@ -199,9 +202,10 @@ const unitView = (
             .documentId(unitId)
             .views([
               S.view.form(),
+              S.view.component(MasterQRView).title('Stamm-QR (Main)'),
               S.view
-                .component(QRBatchList)
-                .title('QR Codes (Raum)')
+                .component(HierarchicalQRList)
+                .title('Katalog QR (Struktur)')
                 .options({ level: 'unit' }),
             ])
         ),
@@ -249,27 +253,30 @@ export const defaultDocumentNode: DefaultDocumentNodeResolver = (
   if (schemaType === 'building') {
     return S.document().views([
       S.view.form(),
+      S.view.component(MasterQRView).title('Stamm-QR (Main)'),
       S.view
-        .component(QRBatchList)
-        .title('Alle QR Codes (Gebäude)')
+        .component(HierarchicalQRList)
+        .title('Katalog QR (Struktur)')
         .options({ level: 'building' }),
     ])
   }
   if (schemaType === 'floor') {
     return S.document().views([
       S.view.form(),
+      S.view.component(MasterQRView).title('Stamm-QR (Main)'),
       S.view
-        .component(QRBatchList)
-        .title('QR Codes (Ebene)')
+        .component(HierarchicalQRList)
+        .title('Katalog QR (Struktur)')
         .options({ level: 'floor' }),
     ])
   }
   if (schemaType === 'unit') {
     return S.document().views([
       S.view.form(),
+      S.view.component(MasterQRView).title('Stamm-QR (Main)'),
       S.view
-        .component(QRBatchList)
-        .title('QR Codes (Raum)')
+        .component(HierarchicalQRList)
+        .title('Katalog QR (Struktur)')
         .options({ level: 'unit' }),
     ])
   }
