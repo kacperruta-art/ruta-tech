@@ -17,7 +17,12 @@ const ASSET_QUERY = `*[_id == $documentId][0]{
   "buildingName": building->name,
   "floorName": parentFloor->name,
   "unitName": parentUnit->name,
-  "clientSlug": building->client->slug.current
+  "clientSlug": coalesce(
+    building->client->slug.current,
+    parentBuilding->client->slug.current,
+    parentFloor->building->client->slug.current,
+    parentUnit->building->client->slug.current
+  )
 }`
 
 interface AssetData {
@@ -148,6 +153,23 @@ export const AssetQRView: UserViewComponent = (props) => {
               <div style={{ padding: 16, background: 'white' }}>
                 <QRCodeSVG value={chatUrl} size={280} level="H" />
               </div>
+              <a
+                href={chatUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'block',
+                  marginTop: 10,
+                  fontSize: 12,
+                  color: 'blue',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  wordBreak: 'break-all',
+                  textAlign: 'center',
+                }}
+              >
+                {chatUrl}
+              </a>
               <Text size={1} weight="medium">
                 {label}
               </Text>

@@ -100,6 +100,7 @@ export const chatContextQuery = groq`
       _type == "asset" => coalesce(
         parentUnit->building->{ _id, name, "pin": pin, "slug": slug.current },
         parentFloor->building->{ _id, name, "pin": pin, "slug": slug.current },
+        building->{ _id, name, "pin": pin, "slug": slug.current },
         parentBuilding->{ _id, name, "pin": pin, "slug": slug.current }
       )
     ),

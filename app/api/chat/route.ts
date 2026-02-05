@@ -2,7 +2,8 @@ import { streamText } from 'ai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { NextResponse } from 'next/server'
 
-import { getAssetContext } from '@/lib/sanity/queries'
+import { chatContextQuery } from '@/lib/sanity/queries'
+import { client } from '@/lib/sanity/client'
 
 const GEMINI_MODEL = 'gemini-2.0-flash'
 
@@ -27,17 +28,29 @@ function parseImagePart(image: unknown): ImagePart | null {
   return { type: 'image', image: new Uint8Array(buffer), mimeType }
 }
 
-function buildSystemPrompt(context: unknown): string {
-  const locationName =
-    typeof (context as { locationName?: string })?.locationName === 'string'
-      ? (context as { locationName?: string }).locationName
-      : 'Unbekannt'
+type ChatContext = {
+  _id: string
+  _type: string
+  name?: string
+  slug?: string
+  context?: string
+  building?: { _id?: string; name?: string; pin?: string; slug?: string }
+}
+
+function buildSystemPrompt(context: ChatContext): string {
+  const locationContext =
+    typeof context.context === 'string' && context.context.trim()
+      ? context.context
+      : 'Unbekannter Standort'
+  const buildingName =
+    typeof context.building?.name === 'string' && context.building.name.trim()
+      ? context.building.name
+      : 'Unbekanntes Gebäude'
   const prettyContext = JSON.stringify(context, null, 2)
 
   return `You are a Facility Manager Assistant.
-You have access to the building structure in context.building.structure (floors and zones).
-If a user reports an issue, try to locate the specific area in the structure.
-The asset is located at: ${locationName}.
+You are helping with: ${locationContext}.
+Building: ${buildingName}.
 
 Context JSON:
 ${prettyContext}`
@@ -82,12 +95,18 @@ export async function POST(request: Request) {
       )
     }
 
-    const context = await getAssetContext(assetId)
+    const context = await client.fetch<ChatContext | null>(chatContextQuery, {
+      slug: assetId,
+    })
     if (!context) {
       return new Response('Asset not found', { status: 404 })
     }
 
-    if (context.building?.pin && context.building.pin !== pin) {
+    if (!context.building) {
+      return new Response('Building not found', { status: 404 })
+    }
+
+    if (context.building.pin && context.building.pin !== pin) {
       return new Response('Invalid PIN', { status: 401 })
     }
 
