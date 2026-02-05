@@ -16,7 +16,7 @@ type BreadcrumbItem = {
   isCurrent?: boolean
 }
 
-const getLabel = (fallback: string, value: ReferenceValue) => {
+const getLabel = (fallback: string, value?: ReferenceValue) => {
   if (!value) return fallback
   if (value.name) return value.name
   if (value._ref) return `${fallback} (${value._ref.slice(0, 6)})`
