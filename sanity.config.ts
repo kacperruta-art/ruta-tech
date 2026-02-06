@@ -9,7 +9,7 @@ import {defineConfig} from 'sanity'
 import {structureTool} from 'sanity/structure'
 import {apiVersion, dataset, projectId} from './sanity/env'
 import {schema} from './sanity/schemaTypes'
-import {structure} from './sanity/deskStructure'
+import {structure, defaultDocumentNode} from './sanity/deskStructure'
 import React from 'react'
 
 // Define Logo INLINE - No external files, no JSX compilation issues
@@ -40,10 +40,33 @@ export default defineConfig({
   dataset,
   title: 'RUTA // TECH V2',
 
-  schema,
+  schema: {
+    ...schema,
+    templates: (prev) => [
+      ...prev,
+      {
+        id: 'provider-by-tenant',
+        title: 'Dienstleister (Mandant)',
+        schemaType: 'provider',
+        parameters: [{ name: 'tenantId', type: 'string' }],
+        value: ({ tenantId }: { tenantId: string }) => ({
+          tenant: { _type: 'reference', _ref: tenantId },
+        }),
+      },
+      {
+        id: 'user-by-tenant',
+        title: 'Benutzer (Mandant)',
+        schemaType: 'user',
+        parameters: [{ name: 'tenantId', type: 'string' }],
+        value: ({ tenantId }: { tenantId: string }) => ({
+          tenant: { _type: 'reference', _ref: tenantId },
+        }),
+      },
+    ],
+  },
 
   plugins: [
-    structureTool({ structure }),
+    structureTool({ structure, defaultDocumentNode }),
     visionTool({ defaultApiVersion: apiVersion }),
   ],
 

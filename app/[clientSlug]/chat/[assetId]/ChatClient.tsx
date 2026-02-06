@@ -2,15 +2,49 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-// --- TYPES & HELPERS ---
-type Message = { role: 'user' | 'assistant'; content: string }
+// ── V2 Data Contract ─────────────────────────────────────
 
-export type AssetHeaderInfo = {
+export type ChatData = {
   _id: string
   name?: string
-  context?: string
-  mainImage?: { asset?: { url?: string } }
-} | null
+  qrCodeId?: string
+  status?: string
+  manufacturer?: string
+  model?: string
+  context?: {
+    title: string
+    subtitle: string
+    type: string
+    unitId: string | null
+    floorId: string | null
+    buildingId: string | null
+    propertyId: string | null
+  }
+  building?: {
+    _id: string
+    name: string
+    pin?: string
+    tenantSlug?: string
+    address?: { street?: string; zip?: string; city?: string; canton?: string }
+    tenant?: {
+      _id?: string
+      name?: string
+      slug?: string
+      brandPrimary?: string
+      toneOfVoice?: string
+    }
+  }
+  serviceMatrix?: Array<{
+    role: string
+    priority: string
+    providerName: string
+    dispatchEmail: string
+  }>
+}
+
+// ── Helpers ──────────────────────────────────────────────
+
+type Message = { role: 'user' | 'assistant'; content: string }
 
 const STORAGE_KEY_PREFIX = 'ruta-chat-pin'
 
@@ -27,8 +61,8 @@ function fileToBase64(file: File): Promise<string> {
   })
 }
 
+// ── Icons (Minimal Gemini-style) ─────────────────────────
 
-// --- ICONS (Minimal Gemini-style) ---
 function IconAttach() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -68,21 +102,28 @@ function IconDoc() {
   )
 }
 
-// --- MAIN COMPONENT ---
-export function ChatClient({
-  clientSlug,
-  assetId,
-  asset,
-  title,
-  context,
-}: {
-  clientSlug: string
-  assetId: string
-  asset: AssetHeaderInfo
-  expectedPin?: string
-  title?: string
-  context?: string
-}) {
+// ── Main Component ───────────────────────────────────────
+
+const DEFAULT_BRAND = '#2563eb'
+
+export function ChatClient({ data }: { data: ChatData }) {
+  // Derive display values from data
+  const headerTitle = data.context?.title ?? data.name ?? 'Assistent'
+  const headerSubtitle = data.context?.subtitle ?? data.building?.name ?? ''
+  const buildingName = data.building?.name ?? 'Gebäude'
+  const tenantName = data.building?.tenant?.name ?? buildingName
+  const assetSlug = data.qrCodeId ?? data._id
+  const tenantSlug = data.building?.tenantSlug ?? '_'
+
+  // Dynamic branding — drives all var(--brand) references
+  const brandColor = data.building?.tenant?.brandPrimary || DEFAULT_BRAND
+  const brandVars = { '--brand': brandColor } as React.CSSProperties
+  // Light tint for bot avatar / user bubble backgrounds
+  const brandTintBg = `${brandColor}12`   // 7% opacity hex
+  const brandTintBorder = `${brandColor}25` // 15% opacity hex
+
+  const storageKey = `${STORAGE_KEY_PREFIX}-${tenantSlug}-${assetSlug}`
+
   const [pin, setPin] = useState('')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [hasCheckedStorage, setHasCheckedStorage] = useState(false)
@@ -94,7 +135,6 @@ export function ChatClient({
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const storageKey = `${STORAGE_KEY_PREFIX}-${clientSlug}-${assetId}`
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -102,6 +142,7 @@ export function ChatClient({
 
   useEffect(() => { scrollToBottom() }, [messages, scrollToBottom])
 
+  // Restore PIN from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return
     const stored = localStorage.getItem(storageKey)
@@ -132,7 +173,7 @@ export function ChatClient({
     const payload = {
       message: message.trim() || '(Bild gesendet)',
       pin: currentPin,
-      assetId,
+      assetId: assetSlug,
       ...(imageBase64 && { image: imageBase64 }),
     }
 
@@ -142,7 +183,7 @@ export function ChatClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      const data = await res.json()
+      const resData = await res.json()
 
       if (res.status === 401) {
         localStorage.removeItem(storageKey)
@@ -153,7 +194,7 @@ export function ChatClient({
         return
       }
       if (!res.ok) {
-        setError(data?.error ?? 'Anfrage fehlgeschlagen')
+        setError(resData?.error ?? 'Anfrage fehlgeschlagen')
         setIsLoading(false)
         return
       }
@@ -167,7 +208,7 @@ export function ChatClient({
       setMessages((prev) => [
         ...prev,
         { role: 'user' as const, content: userContent },
-        { role: 'assistant' as const, content: data.text },
+        { role: 'assistant' as const, content: resData.text },
       ])
       setImage(null)
       setInputValue('')
@@ -176,7 +217,7 @@ export function ChatClient({
     } finally {
       setIsLoading(false)
     }
-  }, [assetId, isAuthenticated, pin, storageKey])
+  }, [assetSlug, isAuthenticated, pin, storageKey])
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -197,19 +238,19 @@ export function ChatClient({
     e.target.value = ''
   }
 
-  // --- RENDER STATES (Loading, Not Found, Login) ---
-  const locationName = context || asset?.context || ''
-  const assetName = title || asset?.name || 'Assistent'
-  const accessTitle = locationName ? `${assetName} · ${locationName}` : assetName
+  // --- Access title for PIN screen ---
+  const accessTitle = headerSubtitle
+    ? `${headerTitle} · ${headerSubtitle}`
+    : headerTitle
 
+  // --- Welcome message ---
+  const welcomeMessage = `Willkommen! Ich bin der Assistent für ${tenantName}. Wie kann ich Ihnen bei "${headerTitle}" helfen?`
+
+  // --- RENDER: Loading / Not Found / PIN ---
   const content =
     !hasCheckedStorage ? (
       <div className="flex flex-1 items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--brand)]" />
-      </div>
-    ) : !assetId ? (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-[var(--muted)]">Objekt nicht gefunden</p>
       </div>
     ) : !isAuthenticated ? (
       <div className="flex flex-1 items-center justify-center px-6">
@@ -257,32 +298,38 @@ export function ChatClient({
       </div>
     ) : null
 
-  // Main Chat UI (when authenticated)
   if (content) {
     return (
-      <div className="flex min-h-dvh w-full flex-col bg-[var(--background)] text-[var(--foreground)]">
+      <div className="flex min-h-dvh w-full flex-col bg-[var(--background)] text-[var(--foreground)]" style={brandVars}>
         {content}
       </div>
     )
   }
 
+  // --- RENDER: Authenticated Chat UI ---
   return (
-    <div className="flex h-dvh w-full flex-col bg-[var(--background)] text-[var(--foreground)]">
+    <div className="flex h-dvh w-full flex-col bg-[var(--background)] text-[var(--foreground)]" style={brandVars}>
 
-      <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--background)] backdrop-blur">
+      {/* ── Header (branded) ─────────────────────────── */}
+      <header
+        className="sticky top-0 z-10 shadow-sm"
+        style={{ backgroundColor: brandColor }}
+      >
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-6 py-3">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <img
-              src="/favicon.ico"
-              alt="Logo"
-              className="h-8 w-8 flex-shrink-0 object-contain"
-            />
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/20">
+              <img
+                src="/favicon.ico"
+                alt="Logo"
+                className="h-5 w-5 object-contain"
+              />
+            </div>
             <div className="min-w-0">
-              <h1 className="truncate text-sm font-semibold text-[var(--foreground)]">
-                {assetName}
+              <h1 className="truncate text-sm font-semibold text-white">
+                {headerTitle}
               </h1>
-              <p className="truncate text-xs text-[var(--muted)]">
-                {locationName || 'Standort unbekannt'}
+              <p className="truncate text-xs text-white/70">
+                {headerSubtitle || 'Standort unbekannt'}
               </p>
             </div>
           </div>
@@ -290,22 +337,26 @@ export function ChatClient({
             type="button"
             onClick={() => alert('Dokumente werden geladen...')}
             aria-label="Dokumente"
-            className="rounded-lg p-2 text-[var(--muted)] transition hover:bg-slate-100 hover:text-[var(--foreground)] dark:hover:bg-slate-900/40"
+            className="rounded-lg p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
           >
             <IconDoc />
           </button>
         </div>
       </header>
 
+      {/* ── Messages ────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto flex max-w-3xl flex-col gap-6">
           {messages.length === 0 && (
             <div className="mt-16 flex flex-col items-center text-center">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-[var(--muted)] dark:bg-blue-900/20">
+              <div
+                className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl"
+                style={{ backgroundColor: brandTintBg, color: brandColor }}
+              >
                 <IconBot />
               </div>
-              <p className="text-sm text-[var(--muted)]">
-                Wie kann ich Ihnen bei diesem Objekt helfen?
+              <p className="max-w-sm text-sm text-[var(--muted)]">
+                {welcomeMessage}
               </p>
             </div>
           )}
@@ -318,16 +369,20 @@ export function ChatClient({
                 className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}
               >
                 {!isUser && (
-                  <div className="mr-3 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[var(--muted)] dark:bg-slate-800">
+                  <div
+                    className="mr-3 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg"
+                    style={{ backgroundColor: brandTintBg, color: brandColor }}
+                  >
                     <IconBot />
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed text-[var(--foreground)] ${
+                  className="max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed text-[var(--foreground)]"
+                  style={
                     isUser
-                      ? 'bg-blue-50 dark:bg-blue-900/20'
-                      : 'bg-slate-50 dark:bg-slate-900/40'
-                  }`}
+                      ? { backgroundColor: brandTintBg, borderLeft: `3px solid ${brandTintBorder}` }
+                      : { backgroundColor: 'var(--surface, #f8fafc)' }
+                  }
                 >
                   <span className="whitespace-pre-wrap break-words">
                     {msg.content}
@@ -339,10 +394,19 @@ export function ChatClient({
 
           {isLoading && (
             <div className="flex w-full justify-start">
-              <div className="mr-3 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--brand)]" />
+              <div
+                className="mr-3 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg"
+                style={{ backgroundColor: brandTintBg }}
+              >
+                <div
+                  className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)]"
+                  style={{ borderTopColor: brandColor }}
+                />
               </div>
-              <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-[var(--muted)] dark:bg-slate-900/40">
+              <div
+                className="rounded-2xl px-4 py-3 text-sm text-[var(--muted)]"
+                style={{ backgroundColor: 'var(--surface, #f8fafc)' }}
+              >
                 Denkt nach...
               </div>
             </div>
@@ -351,12 +415,14 @@ export function ChatClient({
         </div>
       </div>
 
+      {/* ── Error Toast ─────────────────────────────── */}
       {error && (
         <div className="fixed bottom-28 left-1/2 z-20 -translate-x-1/2 rounded-xl bg-red-600/90 px-5 py-3 text-sm text-white shadow-lg backdrop-blur">
           {error}
         </div>
       )}
 
+      {/* ── Input Bar ───────────────────────────────── */}
       <div className="sticky bottom-0 z-10 border-t border-[var(--border)] bg-[var(--background)] backdrop-blur px-4 py-4">
         <div className="relative mx-auto max-w-3xl">
           <form

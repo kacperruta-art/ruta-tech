@@ -69,6 +69,13 @@ export const parkingFacility = defineType({
       validation: (rule) => rule.required(),
     }),
     defineField({
+      name: 'property',
+      title: 'Liegenschaft / Areal',
+      type: 'reference',
+      to: [{ type: 'property' }],
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
       name: 'name',
       title: 'Bezeichnung',
       type: 'string',

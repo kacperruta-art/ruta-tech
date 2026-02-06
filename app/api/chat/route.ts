@@ -1,72 +1,67 @@
-import { streamText } from 'ai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { streamText } from 'ai'
+import { z } from 'zod'
+import { createClient } from 'next-sanity'
 import { NextResponse } from 'next/server'
+import { deepContextQuery } from '@/lib/sanity/queries'
 
-import { chatContextQuery } from '@/lib/sanity/queries'
-import { client } from '@/lib/sanity/client'
+// ── Configuration ────────────────────────────────────────
 
-const GEMINI_MODEL = 'gemini-2.0-flash'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 30
 
-type ImagePart = { type: 'image'; image: Uint8Array; mimeType: string }
-type TextPart = { type: 'text'; text: string }
+// Sanity Write Client (with token for mutations)
+const writeClient = process.env.SANITY_API_TOKEN
+  ? createClient({
+      projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
+      dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
+      apiVersion: '2024-01-01',
+      useCdn: false,
+      token: process.env.SANITY_API_TOKEN,
+    })
+  : null
 
-function parseImagePart(image: unknown): ImagePart | null {
-  if (!image || typeof image !== 'string') return null
+// Sanity Read Client (CDN, no token)
+const readClient = createClient({
+  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
+  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
+  apiVersion: '2024-01-01',
+  useCdn: true,
+})
 
-  let base64Data = image
-  let mimeType = 'image/jpeg'
+// ── Types ────────────────────────────────────────────────
 
-  if (image.startsWith('data:')) {
-    const match = image.match(/^data:([^;]+);base64,(.+)$/)
-    if (!match) return null
-    mimeType = match[1] || 'image/jpeg'
-    base64Data = match[2]
-  }
-
-  if (!base64Data) return null
-  const buffer = Buffer.from(base64Data, 'base64')
-  return { type: 'image', image: new Uint8Array(buffer), mimeType }
-}
-
-type ChatContext = {
+interface ContextDoc {
   _id: string
-  _type: string
   name?: string
-  slug?: string
-  context?: string
-  building?: { _id?: string; name?: string; pin?: string; slug?: string }
+  building?: {
+    _id: string
+    name: string
+    pin?: string
+    tenant?: {
+      _id: string
+      name?: string
+    }
+  }
 }
 
-function buildSystemPrompt(context: ChatContext): string {
-  const locationContext =
-    typeof context.context === 'string' && context.context.trim()
-      ? context.context
-      : 'Unbekannter Standort'
-  const buildingName =
-    typeof context.building?.name === 'string' && context.building.name.trim()
-      ? context.building.name
-      : 'Unbekanntes Gebäude'
-  const prettyContext = JSON.stringify(context, null, 2)
+// ── POST Handler ─────────────────────────────────────────
 
-  return `You are a Facility Manager Assistant.
-You are helping with: ${locationContext}.
-Building: ${buildingName}.
-
-Context JSON:
-${prettyContext}`
-}
-
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const apiKey = process.env.GOOGLE_GEMINI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'GOOGLE_GEMINI_API_KEY is not configured' },
-        { status: 500 }
-      )
+    // 1. Validate environment
+    if (!process.env.GOOGLE_GEMINI_API_KEY) {
+      console.error('[chat] Missing GOOGLE_GEMINI_API_KEY')
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
     }
 
-    const body = await request.json()
+    if (!writeClient) {
+      console.error('[chat] Missing SANITY_API_TOKEN')
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+
+    // 2. Parse request body (ChatClient format)
+    const body = await req.json()
     const { message, pin, assetId, image } = body as {
       message?: string
       pin?: string
@@ -74,75 +69,217 @@ export async function POST(request: Request) {
       image?: string
     }
 
+    // 3. Validate required fields
     if (!message || typeof message !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing or invalid message' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing message' }, { status: 400 })
     }
 
     if (!assetId || typeof assetId !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing or invalid assetId' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing assetId' }, { status: 400 })
     }
 
     if (!pin || typeof pin !== 'string') {
-      return NextResponse.json(
-        { error: 'Missing or invalid pin' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing pin' }, { status: 400 })
     }
 
-    const context = await client.fetch<ChatContext | null>(chatContextQuery, {
+    // 4. Fetch context from Sanity
+    const contextDoc = await readClient.fetch<ContextDoc | null>(deepContextQuery, {
       slug: assetId,
     })
-    if (!context) {
-      return new Response('Asset not found', { status: 404 })
+
+    if (!contextDoc || !contextDoc.building) {
+      return NextResponse.json({ error: 'Asset/Building not found' }, { status: 404 })
     }
 
-    if (!context.building) {
-      return new Response('Building not found', { status: 404 })
+    // 5. Verify PIN
+    if (contextDoc.building.pin && contextDoc.building.pin !== pin) {
+      return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 })
     }
 
-    if (context.building.pin && context.building.pin !== pin) {
-      return new Response('Invalid PIN', { status: 401 })
-    }
+    // 6. Extract context
+    const tenantName = contextDoc.building.tenant?.name || 'Hausverwaltung'
+    const buildingName = contextDoc.building.name
+    const assetName = contextDoc.name || 'Unbekannt'
+    const tenantId = contextDoc.building.tenant?._id
+    const scopeId = contextDoc._id
 
-    const systemPrompt = buildSystemPrompt(context)
-    const contentParts: Array<TextPart | ImagePart> = [
-      { type: 'text', text: message.trim() },
-    ]
-    const imagePart = parseImagePart(image)
-    if (imagePart) {
-      contentParts.push(imagePart)
-    }
+    // 7. Build AGGRESSIVE ONE-SHOT system prompt
+    const systemPrompt = `Du bist ein Facility-Management-Assistent für ${tenantName}.
+Gebäude: ${buildingName}
+Standort/Objekt: ${assetName}
 
+═══════════════════════════════════════════════════════════
+KRITISCHE REGELN - BEFOLGE SIE STRIKT:
+═══════════════════════════════════════════════════════════
+
+1. KEINE RÜCKFRAGEN STELLEN!
+   - Du hast KEINE Gesprächshistorie
+   - Jede Nachricht ist isoliert
+   - Frage NIEMALS nach Details, Priorität oder Kategorie
+   
+2. SOFORTIGE AKTION bei Problemen:
+   - Wenn der Benutzer ein Problem meldet (kaputt, undicht, defekt, funktioniert nicht, Störung, Lärm, Geruch, etc.):
+   - RUFE SOFORT das Tool 'createTicket' auf
+   - WARTE NICHT auf weitere Informationen
+   
+3. SCHÄTZE fehlende Parameter intelligent:
+   - PRIORITY:
+     * "emergency" = Wasser, Gas, Feuer, Sicherheit, kein Strom, Aufzug steckt fest
+     * "high" = Heizung im Winter, Toilette, Haupttür
+     * "medium" = Geräte defekt, normale Reparaturen (DEFAULT)
+     * "low" = Kosmetische Schäden, kleine Unannehmlichkeiten
+   - CATEGORY:
+     * "incident" = Etwas ist kaputt/defekt (DEFAULT)
+     * "maintenance" = Routinewartung, Inspektion
+   - TITLE: Erstelle einen kurzen, professionellen Titel auf Deutsch
+   - DESCRIPTION: Fasse zusammen was der Benutzer gesagt hat
+
+4. ANTWORTFORMAT nach Ticket-Erstellung:
+   - Bestätige kurz die Ticket-Erstellung
+   - Nenne die Ticket-Nummer
+   - Gib einen kurzen Hinweis zur erwarteten Bearbeitungszeit
+
+5. NUR bei echten Fragen (keine Probleme):
+   - Beantworte höflich und kurz
+   - Verwende KEIN Tool
+
+BEISPIELE:
+- "Waschmaschine läuft aus" → createTicket(title: "Waschmaschine undicht", priority: "high", category: "incident")
+- "Licht geht nicht" → createTicket(title: "Beleuchtung defekt", priority: "medium", category: "incident")
+- "Wasser überall!" → createTicket(title: "Wasserschaden", priority: "emergency", category: "incident")
+- "Wann ist die Hausverwaltung erreichbar?" → Antwort ohne Tool
+
+Antworte auf Deutsch (Schweizer Hochdeutsch).`
+
+    // 8. Initialize Gemini
     const google = createGoogleGenerativeAI({
-      apiKey,
+      apiKey: process.env.GOOGLE_GEMINI_API_KEY,
     })
 
-    const result = await streamText({
-      model: google(GEMINI_MODEL),
+    // 9. Tool execution handler
+    const handleCreateTicket = async (args: {
+      title: string
+      description: string
+      priority: 'low' | 'medium' | 'high' | 'emergency'
+      category: 'incident' | 'maintenance'
+    }): Promise<string> => {
+      console.log('[createTicket] Creating ticket:', args.title, 'Priority:', args.priority)
+
+      try {
+        if (!tenantId) {
+          console.error('[createTicket] No tenant ID')
+          return '❌ Fehler: Mandant nicht gefunden. Bitte kontaktieren Sie die Hausverwaltung direkt.'
+        }
+
+        const doc = await writeClient.create({
+          _type: 'ticket',
+          status: 'pending_approval',
+          title: args.title,
+          description: args.description,
+          priority: args.priority,
+          scope: { _type: 'reference', _ref: scopeId },
+          tenant: { _type: 'reference', _ref: tenantId },
+          reportedByName: 'Chat-Benutzer',
+          locationContext: {
+            buildingName: buildingName,
+            assetName: assetName,
+          },
+        })
+
+        console.log('[createTicket] Created:', doc._id)
+        const shortId = doc._id.slice(0, 8).toUpperCase()
+        
+        const priorityText = {
+          emergency: '🚨 Notfall',
+          high: '🔴 Hoch',
+          medium: '🟠 Mittel',
+          low: '🔵 Niedrig'
+        }[args.priority]
+
+        return `✅ **Ticket #${shortId} wurde erstellt!**
+
+📋 **Details:**
+• Betreff: ${args.title}
+• Priorität: ${priorityText}
+• Status: 🟡 Warte auf Freigabe
+
+Die Hausverwaltung wurde benachrichtigt und wird sich zeitnah um Ihr Anliegen kümmern.${args.priority === 'emergency' ? '\n\n⚠️ Bei akuter Gefahr rufen Sie bitte die Notfallnummer an!' : ''}`
+      } catch (error) {
+        console.error('[createTicket] Error:', error)
+        return '❌ Fehler beim Erstellen des Tickets. Bitte versuchen Sie es erneut oder kontaktieren Sie die Hausverwaltung direkt.'
+      }
+    }
+
+    // 10. Define tool schema (Gemini-compatible: NO .default(), NO .optional())
+    const ticketSchema = z.object({
+      title: z.string().describe('Kurzer, professioneller Titel des Problems auf Deutsch'),
+      description: z.string().describe('Zusammenfassung des Problems basierend auf der Benutzernachricht'),
+      priority: z.enum(['low', 'medium', 'high', 'emergency']).describe('Geschätzte Priorität basierend auf der Dringlichkeit'),
+      category: z.enum(['incident', 'maintenance']).describe('incident für Defekte, maintenance für Wartung'),
+    })
+
+    // 11. Build message content
+    type ContentPart = { type: 'text'; text: string } | { type: 'image'; image: Uint8Array; mimeType: string }
+    const contentParts: ContentPart[] = [{ type: 'text', text: message }]
+
+    if (image && typeof image === 'string') {
+      try {
+        let base64Data = image
+        let mimeType = 'image/jpeg'
+        if (image.startsWith('data:')) {
+          const match = image.match(/^data:([^;]+);base64,(.+)$/)
+          if (match) {
+            mimeType = match[1] || 'image/jpeg'
+            base64Data = match[2]
+          }
+        }
+        contentParts.push({
+          type: 'image',
+          image: new Uint8Array(Buffer.from(base64Data, 'base64')),
+          mimeType,
+        })
+      } catch (e) {
+        console.error('[chat] Image parsing error:', e)
+      }
+    }
+
+    // 12. Stream response with tool
+    const result = streamText({
+      model: google('gemini-2.0-flash'),
       system: systemPrompt,
       messages: [{ role: 'user', content: contentParts }],
+      tools: {
+        createTicket: {
+          description: 'Erstellt ein Support-Ticket für eine gemeldete Störung oder Wartungsanfrage. SOFORT verwenden wenn ein Problem gemeldet wird.',
+          inputSchema: ticketSchema,
+          execute: handleCreateTicket,
+        },
+      },
     })
-    const text = await result.text
 
-    if (!text) {
-      return NextResponse.json(
-        { error: 'No text generated from model' },
-        { status: 500 }
-      )
+    // 13. Collect full text response (including tool results)
+    let fullText = ''
+    for await (const part of result.fullStream) {
+      if (part.type === 'text-delta') {
+        fullText += part.text
+      } else if (part.type === 'tool-result') {
+        // Tool result is the return value from execute function
+        const toolResult = 'output' in part ? part.output : null
+        if (typeof toolResult === 'string') {
+          // Tool result IS the response - prioritize it
+          fullText = toolResult + (fullText ? '\n\n' + fullText : '')
+        }
+      }
     }
 
-    return NextResponse.json({ text })
+    // 14. Fallback if empty
+    if (!fullText.trim()) {
+      fullText = 'Entschuldigung, ich konnte Ihre Anfrage nicht verarbeiten. Bitte versuchen Sie es erneut.'
+    }
+
+    return NextResponse.json({ text: fullText.trim() })
   } catch (error) {
     console.error('[chat] Error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

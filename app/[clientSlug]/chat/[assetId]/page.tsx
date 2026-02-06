@@ -1,18 +1,9 @@
 import { notFound } from 'next/navigation'
 
-import { chatContextQuery } from '@/lib/sanity/queries'
+import { deepContextQuery } from '@/lib/sanity/queries'
 import { client } from '@/lib/sanity/client'
 
-import { ChatClient } from './ChatClient'
-
-type ChatContextResult = {
-  _id: string
-  _type: string
-  name?: string
-  slug?: string
-  building?: { _id?: string; name?: string; pin?: string; slug?: string }
-  context?: string
-} | null
+import { ChatClient, type ChatData } from './ChatClient'
 
 export default async function ChatPage({
   params,
@@ -25,7 +16,7 @@ export default async function ChatPage({
     notFound()
   }
 
-  const data = await client.fetch<ChatContextResult>(chatContextQuery, {
+  const data = await client.fetch<ChatData | null>(deepContextQuery, {
     slug: assetId,
   })
 
@@ -34,17 +25,15 @@ export default async function ChatPage({
   }
 
   if (!data.building) {
-    return <p>Konfiguration unvollständig: Kein Gebäude zugeordnet.</p>
+    return (
+      <div style={{ padding: 40, textAlign: 'center' }}>
+        <p>Konfiguration unvollständig: Kein Gebäude zugeordnet.</p>
+        <p style={{ fontSize: 12, color: '#888', marginTop: 8 }}>
+          Bitte prüfen Sie, ob das Asset einem Standort mit Gebäude zugewiesen ist.
+        </p>
+      </div>
+    )
   }
 
-  return (
-    <ChatClient
-      clientSlug={clientSlug}
-      assetId={assetId}
-      asset={data}
-      expectedPin={data.building.pin}
-      title={data.name}
-      context={data.context}
-    />
-  )
+  return <ChatClient data={data} />
 }

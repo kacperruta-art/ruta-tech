@@ -7,6 +7,14 @@ export const user = defineType({
   type: 'document',
   icon: User,
   fields: [
+    defineField({
+      name: 'tenant',
+      title: 'Mandant',
+      type: 'reference',
+      to: [{ type: 'tenant' }],
+      validation: (rule) => rule.required(),
+    }),
+
     // --- Profile ---
     defineField({
       name: 'firstName',
