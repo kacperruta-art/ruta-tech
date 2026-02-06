@@ -1,7 +1,7 @@
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { streamText } from 'ai'
 import { z } from 'zod'
-import { createClient } from 'next-sanity'
+import { createClient, type SanityClient } from 'next-sanity'
 import { NextResponse } from 'next/server'
 import { deepContextQuery } from '@/lib/sanity/queries'
 
@@ -10,24 +10,30 @@ import { deepContextQuery } from '@/lib/sanity/queries'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-// Sanity Write Client (with token for mutations)
-const writeClient = process.env.SANITY_API_TOKEN
-  ? createClient({
-      projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
-      dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
-      apiVersion: '2024-01-01',
-      useCdn: false,
-      token: process.env.SANITY_API_TOKEN,
-    })
-  : null
+// ── Lazy Client Initialization ───────────────────────────
+// Create clients inside handler to ensure env vars are available
 
-// Sanity Read Client (CDN, no token)
-const readClient = createClient({
-  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
-  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
-  apiVersion: '2024-01-01',
-  useCdn: true,
-})
+function getReadClient(): SanityClient {
+  return createClient({
+    projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
+    dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
+    apiVersion: '2024-01-01',
+    useCdn: true,
+  })
+}
+
+function getWriteClient(): SanityClient | null {
+  if (!process.env.SANITY_API_TOKEN) {
+    return null
+  }
+  return createClient({
+    projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
+    dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
+    apiVersion: '2024-01-01',
+    useCdn: false,
+    token: process.env.SANITY_API_TOKEN,
+  })
+}
 
 // ── Types ────────────────────────────────────────────────
 
@@ -71,6 +77,10 @@ export async function POST(req: Request) {
         error: `Server configuration error: Missing ${missingVars.join(', ')}` 
       }, { status: 500 })
     }
+
+    // 2. Initialize clients (lazy - ensures env vars are available)
+    const readClient = getReadClient()
+    const writeClient = getWriteClient()
 
     if (!writeClient) {
       console.error('[chat] writeClient not initialized')
