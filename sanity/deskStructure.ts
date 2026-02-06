@@ -1,284 +1,106 @@
-import type {
-  DefaultDocumentNodeResolver,
-  StructureResolver,
-} from 'sanity/structure'
-import { EditIcon } from '@sanity/icons'
+import type { StructureResolver } from 'sanity/structure'
+import {
+  Building2,
+  Wrench,
+  User,
+  MapPin,
+  Home,
+  Layers,
+  DoorOpen,
+  Car,
+  ClipboardList,
+  BookOpen,
+  Package,
+} from 'lucide-react'
 
-import { AssetQRView } from './components/AssetQRView'
-import { HierarchicalQRList } from './components/HierarchicalQRList'
-import { MasterQRView } from './components/MasterQRView'
-
-// https://www.sanity.io/docs/structure-builder-cheat-sheet
-type StructureBuilder = Parameters<StructureResolver>[0]
-
-const buildingChildrenView = (S: StructureBuilder, buildingId: string) =>
-  S.list()
-    .title('Gebäude Inhalt')
-    .items([
-      S.listItem()
-        .title('Ebenen & Bereiche')
-        .child(
-          S.documentTypeList('floor')
-            .title('Ebenen & Bereiche')
-            .filter('_type == "floor" && building._ref == $buildingId')
-            .params({ buildingId })
-            .initialValueTemplates([
-              S.initialValueTemplateItem('floor-by-building', { buildingId }),
-            ])
-            .child((floorId) => floorView(S, buildingId, floorId))
-        ),
-      S.listItem()
-        .title('Direkte Assets (z.B. Lift)')
-        .child(
-          S.documentTypeList('asset')
-            .title('Direkte Assets (z.B. Lift)')
-            .filter(
-              '_type == "asset" && building._ref == $buildingId && !defined(parentFloor)'
-            )
-            .params({ buildingId })
-            .initialValueTemplates([
-              S.initialValueTemplateItem('asset-by-building', { buildingId }),
-            ])
-            .child((assetId) =>
-              S.document()
-                .documentId(assetId)
-                .schemaType('asset')
-                .views([
-                  S.view.form(),
-                  S.view.component(AssetQRView).title('QR Code'),
-                ])
-            )
-        ),
-    ])
-
-const buildingView = (S: StructureBuilder, buildingId: string) =>
-  S.list()
-    .title('Gebäude')
-    .items([
-      S.listItem()
-        .title('Gebäude bearbeiten')
-        .icon(EditIcon)
-        .child(
-          S.document()
-            .schemaType('building')
-            .documentId(buildingId)
-            .views([
-              S.view.form(),
-              S.view.component(MasterQRView).title('Stamm-QR (Main)'),
-              S.view
-                .component(HierarchicalQRList)
-                .title('Katalog QR (Struktur)')
-                .options({ level: 'building' }),
-            ])
-        ),
-      S.listItem()
-        .title('Gebäude Inhalt')
-        .child(buildingChildrenView(S, buildingId)),
-    ])
-
-const floorChildrenView = (
-  S: StructureBuilder,
-  buildingId: string,
-  floorId: string
-) =>
-  S.list()
-    .title('Ebene Inhalt')
-    .items([
-      S.listItem()
-        .title('Räume & Einheiten')
-        .child(
-          S.documentTypeList('unit')
-            .title('Räume & Einheiten')
-            .filter('_type == "unit" && floor._ref == $floorId')
-            .params({ floorId })
-            .initialValueTemplates([
-              S.initialValueTemplateItem('unit-by-floor', { buildingId, floorId }),
-            ])
-            .child((unitId) => unitView(S, buildingId, floorId, unitId))
-        ),
-      S.listItem()
-        .title('Assets auf Ebene')
-        .child(
-          S.documentTypeList('asset')
-            .title('Assets auf Ebene')
-            .filter(
-              '_type == "asset" && parentFloor._ref == $floorId && !defined(parentUnit)'
-            )
-            .params({ floorId })
-            .initialValueTemplates([
-              S.initialValueTemplateItem('asset-by-floor', { buildingId, floorId }),
-            ])
-            .child((assetId) =>
-              S.document()
-                .documentId(assetId)
-                .schemaType('asset')
-                .views([
-                  S.view.form(),
-                  S.view.component(AssetQRView).title('QR Code'),
-                ])
-            )
-        ),
-    ])
-
-const floorView = (
-  S: StructureBuilder,
-  buildingId: string,
-  floorId: string
-) =>
-  S.list()
-    .title('Ebene')
-    .items([
-      S.listItem()
-        .title('Ebene bearbeiten')
-        .icon(EditIcon)
-        .child(
-          S.document()
-            .schemaType('floor')
-            .documentId(floorId)
-            .views([
-              S.view.form(),
-              S.view.component(MasterQRView).title('Stamm-QR (Main)'),
-              S.view
-                .component(HierarchicalQRList)
-                .title('Katalog QR (Struktur)')
-                .options({ level: 'floor' }),
-            ])
-        ),
-      S.listItem()
-        .title('Ebene Inhalt')
-        .child(floorChildrenView(S, buildingId, floorId)),
-    ])
-
-const unitChildrenView = (
-  S: StructureBuilder,
-  buildingId: string,
-  floorId: string,
-  unitId: string
-) =>
-  S.list()
-    .title('Einheit Inhalt')
-    .items([
-      S.listItem()
-        .title('Assets im Raum')
-        .child(
-          S.documentTypeList('asset')
-            .title('Assets im Raum')
-            .filter('_type == "asset" && parentUnit._ref == $unitId')
-            .params({ unitId })
-            .initialValueTemplates([
-              S.initialValueTemplateItem('asset-by-unit', {
-                buildingId,
-                floorId,
-                unitId,
-              }),
-            ])
-            .child((assetId) =>
-              S.document()
-                .documentId(assetId)
-                .schemaType('asset')
-                .views([
-                  S.view.form(),
-                  S.view.component(AssetQRView).title('QR Code'),
-                ])
-            )
-        ),
-    ])
-
-const unitView = (
-  S: StructureBuilder,
-  buildingId: string,
-  floorId: string,
-  unitId: string
-) =>
-  S.list()
-    .title('Einheit')
-    .items([
-      S.listItem()
-        .title('Einheit bearbeiten')
-        .icon(EditIcon)
-        .child(
-          S.document()
-            .schemaType('unit')
-            .documentId(unitId)
-            .views([
-              S.view.form(),
-              S.view.component(MasterQRView).title('Stamm-QR (Main)'),
-              S.view
-                .component(HierarchicalQRList)
-                .title('Katalog QR (Struktur)')
-                .options({ level: 'unit' }),
-            ])
-        ),
-      S.listItem()
-        .title('Einheit Inhalt')
-        .child(unitChildrenView(S, buildingId, floorId, unitId)),
-    ])
-
-const clientView = (S: StructureBuilder, clientId: string) =>
-  S.list()
-    .title('Kunde')
-    .items([
-      S.listItem()
-        .title('Kunde bearbeiten')
-        .icon(EditIcon)
-        .child(S.document().schemaType('client').documentId(clientId)),
-      S.listItem()
-        .title('Gebäude')
-        .child(
-          S.documentTypeList('building')
-            .title('Gebäude')
-            .filter('_type == "building" && client._ref == $clientId')
-            .params({ clientId })
-            .child((buildingId) => buildingView(S, buildingId))
-        ),
-    ])
+// All document types explicitly listed in the sidebar.
+// Used to filter them out of the auto-generated "rest" section.
+const LISTED_TYPES = [
+  'tenant',
+  'provider',
+  'user',
+  'property',
+  'building',
+  'floor',
+  'unit',
+  'parkingFacility',
+  'ticket',
+  'logbookEntry',
+  'asset',
+]
 
 export const structure: StructureResolver = (S) =>
-  S.documentTypeList('client')
-    .title('Kunden')
-    .child((clientId) =>
-      clientView(S, clientId)
-    )
+  S.list()
+    .title('RUTA // TECH')
+    .items([
+      // ── Organisation & Personen ──────────────────────
+      S.listItem()
+        .title('Mandanten')
+        .icon(Building2)
+        .child(S.documentTypeList('tenant').title('Mandanten')),
 
-export const defaultDocumentNode: DefaultDocumentNodeResolver = (
-  S,
-  { schemaType }
-) => {
-  if (schemaType === 'asset') {
-    return S.document().views([
-      S.view.form(),
-      S.view.component(AssetQRView).title('QR Code'),
+      S.listItem()
+        .title('Dienstleister')
+        .icon(Wrench)
+        .child(S.documentTypeList('provider').title('Dienstleister')),
+
+      S.listItem()
+        .title('Benutzer')
+        .icon(User)
+        .child(S.documentTypeList('user').title('Benutzer')),
+
+      // ── Immobilienstruktur ───────────────────────────
+      S.divider(),
+
+      S.listItem()
+        .title('Liegenschaften / Areale')
+        .icon(MapPin)
+        .child(S.documentTypeList('property').title('Liegenschaften / Areale')),
+
+      S.listItem()
+        .title('Gebäude')
+        .icon(Home)
+        .child(S.documentTypeList('building').title('Gebäude')),
+
+      S.listItem()
+        .title('Ebenen & Zonen')
+        .icon(Layers)
+        .child(S.documentTypeList('floor').title('Ebenen & Zonen')),
+
+      S.listItem()
+        .title('Nutzungseinheiten')
+        .icon(DoorOpen)
+        .child(S.documentTypeList('unit').title('Nutzungseinheiten')),
+
+      S.listItem()
+        .title('Parkanlagen')
+        .icon(Car)
+        .child(S.documentTypeList('parkingFacility').title('Parkanlagen')),
+
+      // ── Betrieb ──────────────────────────────────────
+      S.divider(),
+
+      S.listItem()
+        .title('Tickets / Meldungen')
+        .icon(ClipboardList)
+        .child(S.documentTypeList('ticket').title('Tickets / Meldungen')),
+
+      S.listItem()
+        .title('Serviceheft')
+        .icon(BookOpen)
+        .child(S.documentTypeList('logbookEntry').title('Serviceheft')),
+
+      // ── Inventar ─────────────────────────────────────
+      S.divider(),
+
+      S.listItem()
+        .title('Anlagen & Inventar')
+        .icon(Package)
+        .child(S.documentTypeList('asset').title('Anlagen & Inventar')),
+
+      // ── Remaining types (if any) ─────────────────────
+      S.divider(),
+      ...S.documentTypeListItems().filter(
+        (item) => !LISTED_TYPES.includes(item.getId() ?? '')
+      ),
     ])
-  }
-  if (schemaType === 'building') {
-    return S.document().views([
-      S.view.form(),
-      S.view.component(MasterQRView).title('Stamm-QR (Main)'),
-      S.view
-        .component(HierarchicalQRList)
-        .title('Katalog QR (Struktur)')
-        .options({ level: 'building' }),
-    ])
-  }
-  if (schemaType === 'floor') {
-    return S.document().views([
-      S.view.form(),
-      S.view.component(MasterQRView).title('Stamm-QR (Main)'),
-      S.view
-        .component(HierarchicalQRList)
-        .title('Katalog QR (Struktur)')
-        .options({ level: 'floor' }),
-    ])
-  }
-  if (schemaType === 'unit') {
-    return S.document().views([
-      S.view.form(),
-      S.view.component(MasterQRView).title('Stamm-QR (Main)'),
-      S.view
-        .component(HierarchicalQRList)
-        .title('Katalog QR (Struktur)')
-        .options({ level: 'unit' }),
-    ])
-  }
-  return S.document()
-}

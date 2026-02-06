@@ -1,229 +1,136 @@
-import {
-  ComponentIcon,
-  PinIcon,
-  CodeIcon as BarcodeIcon,
-  CalendarIcon,
-  CheckmarkCircleIcon,
-  WarningOutlineIcon,
-} from '@sanity/icons'
-import { defineType, defineField, defineArrayMember } from 'sanity'
-import { HierarchyBreadcrumbs } from '../components/HierarchyBreadcrumbs'
-
-const assetTypeOptions = [
-  { title: 'Heizung', value: 'Heating' },
-  { title: 'Lüftung', value: 'Ventilation' },
-  { title: 'Sanitär', value: 'Sanitary' },
-  { title: 'Aufzug', value: 'Elevator' },
-  { title: 'Elektro', value: 'Electrical' },
-  { title: 'Waschraum-Gerät', value: 'Appliance' },
-  { title: 'Türen / Tore', value: 'DoorGate' },
-  { title: 'Sicherheit', value: 'Safety' },
-  { title: 'Sonstiges', value: 'Other' },
-]
-
-const statusOptions = [
-  { title: 'Aktiv', value: 'active' },
-  { title: 'Wartung', value: 'maintenance' },
-  { title: 'Defekt', value: 'defect' },
-  { title: 'Inaktiv', value: 'inactive' },
-]
+import { defineType, defineField } from 'sanity'
+import { Package } from 'lucide-react'
 
 export const asset = defineType({
   name: 'asset',
   title: 'Anlage / Gerät',
   type: 'document',
-  icon: ComponentIcon,
+  icon: Package,
   groups: [
-    { name: 'basis', title: 'Basisdaten', default: true, icon: BarcodeIcon },
-    { name: 'location', title: 'Standort', icon: PinIcon },
-    { name: 'tech', title: 'Technik & Specs', icon: ComponentIcon },
-    { name: 'service', title: 'Service & Garantie', icon: CalendarIcon },
-    { name: 'docs', title: 'Dokumente', icon: CheckmarkCircleIcon },
-    { name: 'legacy', title: 'Legacy', icon: WarningOutlineIcon, hidden: true },
-  ],
-  fieldsets: [
-    { name: 'techDetails', title: 'Technische Daten', options: { columns: 2 } },
+    { name: 'identity', title: 'Identität', default: true },
+    { name: 'specs', title: 'Spezifikationen' },
+    { name: 'location', title: 'Standort' },
+    { name: 'docs', title: 'Dokumente' },
   ],
   fields: [
     defineField({
-      name: 'locationContext',
-      title: ' ',
-      type: 'string',
-      group: 'basis',
-      hidden: false,
-      components: {
-        input: HierarchyBreadcrumbs,
-      },
-      initialValue: 'Navigation',
+      name: 'tenant',
+      title: 'Mandant',
+      type: 'reference',
+      to: [{ type: 'tenant' }],
+      validation: (rule) => rule.required(),
     }),
-    // --- Group: basis ---
+
+    // --- Group: identity ---
     defineField({
       name: 'name',
-      type: 'string',
       title: 'Bezeichnung',
-      group: 'basis',
+      type: 'string',
+      group: 'identity',
       validation: (rule) => rule.required(),
     }),
     defineField({
-      name: 'slug',
+      name: 'qrCodeId',
+      title: 'QR-Code ID',
       type: 'slug',
-      title: 'Slug',
-      group: 'basis',
+      group: 'identity',
+      description: 'Eindeutige ID für den QR-Code.',
       options: { source: 'name', maxLength: 96 },
+      validation: (rule) => rule.required(),
     }),
     defineField({
-      name: 'assetType',
-      type: 'string',
-      title: 'Kategorie',
-      group: 'basis',
-      options: { list: assetTypeOptions },
+      name: 'image',
+      title: 'Bild',
+      type: 'image',
+      group: 'identity',
+      options: { hotspot: true },
     }),
     defineField({
       name: 'status',
-      type: 'string',
       title: 'Status',
-      group: 'basis',
-      options: { list: statusOptions },
+      type: 'string',
+      group: 'identity',
+      options: {
+        list: [
+          { title: 'Aktiv', value: 'active' },
+          { title: 'Inaktiv', value: 'inactive' },
+          { title: 'Defekt', value: 'defective' },
+          { title: 'Entsorgt', value: 'disposed' },
+        ],
+      },
       initialValue: 'active',
     }),
-    defineField({
-      name: 'mainImage',
-      type: 'image',
-      title: 'Titelbild',
-      group: 'basis',
-      options: { hotspot: true },
-    }),
-    // --- Group: location ---
-    defineField({
-      name: 'building',
-      type: 'reference',
-      to: [{ type: 'building' }],
-      title: 'Gebäude',
-      group: 'location',
-      validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'parentFloor',
-      type: 'reference',
-      to: [{ type: 'floor' }],
-      title: 'Ebene / Etage',
-      description: 'Optional. Wähle eine Ebene (z.B. 1. OG).',
-      group: 'location',
-    }),
-    defineField({
-      name: 'parentUnit',
-      type: 'reference',
-      to: [{ type: 'unit' }],
-      title: 'Raum / Einheit',
-      description: 'Optional. Wähle einen Raum (z.B. Wohnung 2.1).',
-      group: 'location',
-    }),
-    defineField({
-      name: 'locationName',
-      type: 'string',
-      title: 'Gebäudeteil / Standort (Legacy)',
-      description:
-        "Name of the section defined in the Building (e.g. 'Waschküche A').",
-      group: 'legacy',
-      readOnly: true,
-    }),
-    defineField({
-      name: 'coordinates',
-      type: 'string',
-      title: 'Koordinaten / Etage genau',
-      group: 'location',
-    }),
-    // --- Group: tech ---
+
+    // --- Group: specs ---
     defineField({
       name: 'manufacturer',
-      type: 'string',
       title: 'Hersteller',
-      group: 'tech',
-      fieldset: 'techDetails',
+      type: 'string',
+      group: 'specs',
     }),
     defineField({
       name: 'model',
+      title: 'Modell',
       type: 'string',
-      title: 'Modell / Typ',
-      group: 'tech',
-      fieldset: 'techDetails',
+      group: 'specs',
     }),
     defineField({
       name: 'serialNumber',
-      type: 'string',
       title: 'Seriennummer',
-      group: 'tech',
-      fieldset: 'techDetails',
+      type: 'string',
+      group: 'specs',
     }),
     defineField({
       name: 'installDate',
-      type: 'date',
       title: 'Installationsdatum',
-      group: 'tech',
-      fieldset: 'techDetails',
-    }),
-    // --- Group: service ---
-    defineField({
-      name: 'serviceProviderName',
-      type: 'string',
-      title: 'Service Partner Name',
-      group: 'service',
-    }),
-    defineField({
-      name: 'serviceProviderContact',
-      type: 'string',
-      title: 'Telefon / E-Mail',
-      group: 'service',
-    }),
-    defineField({
-      name: 'warrantyUntil',
       type: 'date',
+      group: 'specs',
+    }),
+    defineField({
+      name: 'warrantyEnd',
       title: 'Garantie bis',
-      group: 'service',
-    }),
-    defineField({
-      name: 'lastService',
       type: 'date',
-      title: 'Letzter Service',
-      group: 'service',
+      group: 'specs',
     }),
+
+    // --- Group: location (Polymorphic) ---
     defineField({
-      name: 'nextService',
-      type: 'date',
-      title: 'Nächster Service',
-      group: 'service',
+      name: 'location',
+      title: 'Standort',
+      type: 'reference',
+      group: 'location',
+      to: [
+        { type: 'property' },
+        { type: 'building' },
+        { type: 'floor' },
+        { type: 'unit' },
+        { type: 'parkingFacility' },
+      ],
+      description:
+        'Polymorphe Zuordnung: Liegenschaft, Gebäude, Stockwerk, Einheit oder Parkanlage.',
     }),
+
     // --- Group: docs ---
     defineField({
       name: 'documents',
-      type: 'array',
       title: 'Dokumente',
+      type: 'array',
       group: 'docs',
-      of: [
-        defineArrayMember({
-          type: 'file',
-          options: { accept: '.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg' },
-        }),
-      ],
+      of: [{ type: 'file' }],
     }),
   ],
   preview: {
     select: {
-      name: 'name',
-      assetType: 'assetType',
-      buildingName: 'building.name',
-      status: 'status',
-      mainImage: 'mainImage',
+      title: 'name',
+      manufacturer: 'manufacturer',
+      model: 'model',
+      media: 'image',
     },
-    prepare({ name, assetType, buildingName, status, mainImage }) {
-      const subtitle = buildingName
-        ? `${assetType || 'Asset'} | ${buildingName}`
-        : assetType || undefined
-      const media =
-        mainImage || (status === 'defect' ? WarningOutlineIcon : ComponentIcon)
+    prepare({ title, manufacturer, model, media }) {
+      const sub = [manufacturer, model].filter(Boolean).join(' ')
       return {
-        title: name,
-        subtitle,
+        title: title || 'Unbenannt',
+        subtitle: sub || undefined,
         media,
       }
     },

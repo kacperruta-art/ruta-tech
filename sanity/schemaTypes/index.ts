@@ -1,29 +1,43 @@
-import { asset } from './asset'
-import { assetType } from './assetType'
-import { client } from './client'
-import {
-  building,
-  buildingCertificate,
-  usageUnit,
-  commonArea,
-  zoneItem,
-  zone,
-} from './building'
+// RUTA-TECH V2.0 — Schema Registry
+// All document and object types for the Sanity Studio.
+
+import { tenant } from './tenant'
+import { provider } from './provider'
+import { property } from './property'
+import { building } from './building'
 import { floor } from './floor'
 import { unit } from './unit'
+import { parkingFacility, parkingSpot } from './parkingFacility'
+import { asset } from './asset'
+import { ticket } from './ticket'
+import { logbookEntry } from './logbookEntry'
+import { user } from './user'
 
+export const schemaTypes = [
+  // Core config
+  tenant,
+  user,
+
+  // Hierarchy
+  property,
+  building,
+  floor,
+  unit,
+
+  // Parking
+  parkingFacility,
+  parkingSpot,
+
+  // Assets & Operations
+  asset,
+  ticket,
+  logbookEntry,
+
+  // Service partners
+  provider,
+]
+
+// Backward-compatible export consumed by sanity.config.ts
 export const schema = {
-  types: [
-    client,
-    building,
-    usageUnit,
-    commonArea,
-    buildingCertificate,
-    floor,
-    unit,
-    zoneItem,
-    zone,
-    asset,
-    assetType,
-  ],
+  types: schemaTypes,
 }

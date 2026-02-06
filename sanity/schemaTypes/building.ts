@@ -1,515 +1,209 @@
-import {
-  HomeIcon,
-  ThListIcon,
-  DocumentIcon,
-  NumberIcon,
-  ArrowRightIcon,
-  UsersIcon,
-  DatabaseIcon,
-} from '@sanity/icons'
 import { defineType, defineField, defineArrayMember } from 'sanity'
+import { Home } from 'lucide-react'
 
-const usageUnitTypeOptions = [
-  { title: 'Wohnung', value: 'Apartment' },
-  { title: 'Büro', value: 'Office' },
-  { title: 'Laden', value: 'Retail' },
+const cantonOptions = [
+  { title: 'Zürich', value: 'ZH' },
+  { title: 'Bern', value: 'BE' },
+  { title: 'Luzern', value: 'LU' },
+  { title: 'Uri', value: 'UR' },
+  { title: 'Schwyz', value: 'SZ' },
+  { title: 'Obwalden', value: 'OW' },
+  { title: 'Nidwalden', value: 'NW' },
+  { title: 'Glarus', value: 'GL' },
+  { title: 'Zug', value: 'ZG' },
+  { title: 'Freiburg', value: 'FR' },
+  { title: 'Solothurn', value: 'SO' },
+  { title: 'Basel-Stadt', value: 'BS' },
+  { title: 'Basel-Landschaft', value: 'BL' },
+  { title: 'Schaffhausen', value: 'SH' },
+  { title: 'Appenzell A.Rh.', value: 'AR' },
+  { title: 'Appenzell I.Rh.', value: 'AI' },
+  { title: 'St. Gallen', value: 'SG' },
+  { title: 'Graubünden', value: 'GR' },
+  { title: 'Aargau', value: 'AG' },
+  { title: 'Thurgau', value: 'TG' },
+  { title: 'Tessin', value: 'TI' },
+  { title: 'Waadt', value: 'VD' },
+  { title: 'Wallis', value: 'VS' },
+  { title: 'Neuenburg', value: 'NE' },
+  { title: 'Genf', value: 'GE' },
+  { title: 'Jura', value: 'JU' },
 ]
 
-const commonAreaTypeOptions = [
-  { title: 'Waschküche', value: 'Laundry' },
-  { title: 'Gang', value: 'Corridor' },
-  { title: 'Technik', value: 'Technical' },
-  { title: 'Lager', value: 'Storage' },
+const serviceRoleOptions = [
+  { title: 'Facility Management', value: 'facility' },
+  { title: 'HLKS', value: 'hvac' },
+  { title: 'Aufzug', value: 'lift' },
+  { title: 'Elektro', value: 'electrician' },
+  { title: 'Reinigung', value: 'cleaning' },
+  { title: 'Sicherheit', value: 'security' },
+  { title: 'Verwaltung', value: 'management' },
 ]
-
-const buildingCertificateTypeOptions = [
-  { title: 'GEAK / CECB', value: 'GEAK/CECB' },
-  { title: 'Minergie', value: 'Minergie' },
-  { title: 'Brandschutz', value: 'FireSafety' },
-  { title: 'Aufzugsicherheit', value: 'ElevatorSafety' },
-]
-
-const heatingTypeOptions = [
-  { title: 'Wärmepumpe', value: 'HeatPump' },
-  { title: 'Öl', value: 'Oil' },
-  { title: 'Gas', value: 'Gas' },
-  { title: 'Fernwärme', value: 'District' },
-]
-
-const typeTitleMap = (options: { title: string; value: string }[]) =>
-  new Map(options.map((option) => [option.value, option.title]))
-
-const usageUnitTypeTitles = typeTitleMap(usageUnitTypeOptions)
-const commonAreaTypeTitles = typeTitleMap(commonAreaTypeOptions)
-
-const managerEntry = defineArrayMember({
-  type: 'object',
-  name: 'managerEntry',
-  title: 'Kontakt',
-  icon: UsersIcon,
-  fields: [
-    defineField({
-      name: 'kind',
-      type: 'string',
-      title: 'Typ',
-      options: {
-        list: [
-          { title: 'Kontaktangaben', value: 'contact' },
-          { title: 'Firma (Referenz)', value: 'client' },
-        ],
-      },
-      validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'contact',
-      type: 'string',
-      title: 'Kontaktangaben',
-      description: 'Name, Telefon oder E-Mail.',
-      hidden: ({ parent }) => parent?.kind === 'client',
-      validation: (rule) =>
-        rule.custom((value, context) => {
-          const parent = context.parent as { kind?: string; client?: unknown } | undefined
-          if (parent?.kind === 'contact' && !value) {
-            return 'Kontaktangaben sind erforderlich.'
-          }
-          return true
-        }),
-    }),
-    defineField({
-      name: 'client',
-      type: 'reference',
-      to: [{ type: 'client' }],
-      title: 'Firma',
-      hidden: ({ parent }) => parent?.kind === 'contact',
-      validation: (rule) =>
-        rule.custom((value, context) => {
-          const parent = context.parent as { kind?: string; contact?: unknown } | undefined
-          if (parent?.kind === 'client' && !value) {
-            return 'Bitte eine Firma auswählen.'
-          }
-          return true
-        }),
-    }),
-  ],
-  preview: {
-    select: {
-      kind: 'kind',
-      contact: 'contact',
-      clientName: 'client.name',
-    },
-    prepare({ kind, contact, clientName }) {
-      const title =
-        kind === 'client' ? clientName || 'Firma' : contact || 'Kontaktangaben'
-      return {
-        title,
-        subtitle: kind === 'client' ? 'Firma' : 'Kontakt',
-      }
-    },
-  },
-})
-
-export const usageUnit = defineType({
-  name: 'usageUnit',
-  title: 'Mietobjekt',
-  type: 'object',
-  icon: DocumentIcon,
-  fields: [
-    defineField({
-      name: 'name',
-      type: 'string',
-      title: 'Bezeichnung',
-      validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'type',
-      type: 'string',
-      title: 'Nutzung',
-      options: { list: usageUnitTypeOptions },
-    }),
-    defineField({
-      name: 'tenantName',
-      type: 'string',
-      title: 'Mieter',
-    }),
-  ],
-  preview: {
-    select: { name: 'name', type: 'type' },
-    prepare({ name, type }) {
-      return {
-        title: name || 'Unbenannt',
-        subtitle: type ? usageUnitTypeTitles.get(type) : undefined,
-      }
-    },
-  },
-})
-
-export const commonArea = defineType({
-  name: 'commonArea',
-  title: 'Allgemeiner Bereich',
-  type: 'object',
-  icon: ThListIcon,
-  fields: [
-    defineField({
-      name: 'name',
-      type: 'string',
-      title: 'Bezeichnung',
-      validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'type',
-      type: 'string',
-      title: 'Kategorie',
-      options: { list: commonAreaTypeOptions },
-    }),
-  ],
-  preview: {
-    select: { name: 'name', type: 'type' },
-    prepare({ name, type }) {
-      return {
-        title: name || 'Unbenannt',
-        subtitle: type ? commonAreaTypeTitles.get(type) : undefined,
-      }
-    },
-  },
-})
-
-export const floor = defineType({
-  name: 'floor',
-  title: 'Stockwerk',
-  type: 'object',
-  icon: NumberIcon,
-  fields: [
-    defineField({
-      name: 'name',
-      type: 'string',
-      title: 'Bezeichnung',
-      validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'level',
-      type: 'number',
-      title: 'Ebene (Sortierung)',
-    }),
-    defineField({
-      name: 'units',
-      type: 'array',
-      title: 'Mietobjekte / Wohnungen',
-      of: [defineArrayMember({ type: 'usageUnit' })],
-    }),
-    defineField({
-      name: 'commonAreas',
-      type: 'array',
-      title: 'Allgemeine Bereiche (Gang, WC, etc.)',
-      of: [defineArrayMember({ type: 'commonArea' })],
-    }),
-  ],
-  preview: {
-    select: { name: 'name', units: 'units' },
-    prepare({ name, units }) {
-      const count = Array.isArray(units) ? units.length : 0
-      return {
-        title: name || 'Unbenannt',
-        subtitle: `${count} Mietobjekt${count === 1 ? '' : 'e'}`,
-      }
-    },
-  },
-})
-
-export const zoneItem = defineType({
-  name: 'zoneItem',
-  title: 'Zonenplatz',
-  type: 'object',
-  icon: ArrowRightIcon,
-  fields: [
-    defineField({
-      name: 'name',
-      type: 'string',
-      title: 'Bezeichnung',
-      validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'type',
-      type: 'string',
-      title: 'Typ',
-    }),
-  ],
-  preview: {
-    select: { name: 'name', type: 'type' },
-    prepare({ name, type }) {
-      return {
-        title: name || 'Unbenannt',
-        subtitle: type || undefined,
-      }
-    },
-  },
-})
-
-export const zone = defineType({
-  name: 'zone',
-  title: 'Zone',
-  type: 'object',
-  icon: DatabaseIcon,
-  fields: [
-    defineField({
-      name: 'name',
-      type: 'string',
-      title: 'Bezeichnung',
-      validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'items',
-      type: 'array',
-      title: 'Plätze / Räume',
-      of: [defineArrayMember({ type: 'zoneItem' })],
-    }),
-  ],
-  preview: {
-    select: { name: 'name', items: 'items' },
-    prepare({ name, items }) {
-      const count = Array.isArray(items) ? items.length : 0
-      return {
-        title: name || 'Unbenannt',
-        subtitle: `${count} Eintrag${count === 1 ? '' : 'e'}`,
-      }
-    },
-  },
-})
-
-export const buildingCertificate = defineType({
-  name: 'buildingCertificate',
-  title: 'Zertifikat',
-  type: 'object',
-  icon: DocumentIcon,
-  fields: [
-    defineField({
-      name: 'type',
-      type: 'string',
-      title: 'Typ',
-      options: { list: buildingCertificateTypeOptions },
-    }),
-    defineField({
-      name: 'issueDate',
-      type: 'date',
-      title: 'Ausstellungsdatum',
-    }),
-    defineField({
-      name: 'validUntil',
-      type: 'date',
-      title: 'Gültig bis',
-    }),
-    defineField({
-      name: 'file',
-      type: 'file',
-      title: 'Datei',
-    }),
-  ],
-})
 
 export const building = defineType({
   name: 'building',
   title: 'Gebäude',
   type: 'document',
-  icon: HomeIcon,
+  icon: Home,
   groups: [
-    { name: 'basis', title: 'Basisdaten', default: true, icon: HomeIcon },
-    { name: 'structure', title: 'Struktur', icon: ThListIcon },
-    { name: 'dna', title: 'Technische Daten', icon: DatabaseIcon },
-    { name: 'docs', title: 'Dokumente', icon: DocumentIcon },
-  ],
-  fieldsets: [
-    { name: 'address', title: 'Adresse', options: { columns: 2 } },
-    { name: 'systems', title: 'Systeme', options: { columns: 2 } },
-    { name: 'stats', title: 'Kennzahlen', options: { columns: 2 } },
+    { name: 'context', title: 'Kontext', default: true },
+    { name: 'tech', title: 'Technik' },
+    { name: 'access', title: 'Zugang' },
+    { name: 'services', title: 'Dienstleister-Matrix' },
   ],
   fields: [
-    // --- Group: basis ---
+    defineField({
+      name: 'tenant',
+      title: 'Mandant',
+      type: 'reference',
+      to: [{ type: 'tenant' }],
+      validation: (rule) => rule.required(),
+    }),
+
+    // --- Group: context ---
     defineField({
       name: 'name',
-      type: 'string',
       title: 'Name',
-      group: 'basis',
+      type: 'string',
+      group: 'context',
       validation: (rule) => rule.required(),
     }),
     defineField({
       name: 'slug',
-      type: 'slug',
       title: 'Slug',
-      group: 'basis',
+      type: 'slug',
+      group: 'context',
       options: { source: 'name', maxLength: 96 },
       validation: (rule) => rule.required(),
     }),
     defineField({
-      name: 'client',
+      name: 'property',
+      title: 'Liegenschaft',
       type: 'reference',
-      to: [{ type: 'client' }],
-      title: 'Kunde / Eigentümer',
-      group: 'basis',
+      to: [{ type: 'property' }],
+      group: 'context',
     }),
     defineField({
-      name: 'manager',
-      type: 'array',
-      title: 'Verwaltung / Ansprechpartner',
-      description: 'Kontaktangaben oder Referenz zu einer Firma.',
-      group: 'basis',
-      of: [managerEntry],
-      validation: (rule) => rule.max(1),
+      name: 'address',
+      title: 'Adresse',
+      type: 'object',
+      group: 'context',
+      fields: [
+        defineField({ name: 'street', title: 'Strasse', type: 'string' }),
+        defineField({ name: 'zip', title: 'PLZ', type: 'string' }),
+        defineField({ name: 'city', title: 'Ort', type: 'string' }),
+        defineField({
+          name: 'canton',
+          title: 'Kanton',
+          type: 'string',
+          options: { list: cantonOptions },
+        }),
+      ],
     }),
-    defineField({
-      name: 'pin',
-      type: 'string',
-      title: 'Zugangs-PIN (Chat)',
-      description: '4-stellig, z.B. 1410. Wird für den Zugang zum Chat benötigt.',
-      group: 'basis',
-      validation: (Rule) => Rule.min(4).max(6).regex(/^\d+$/, { name: 'numbers' }),
-    }),
-    defineField({
-      name: 'mainImage',
-      type: 'image',
-      title: 'Bild',
-      group: 'basis',
-      options: { hotspot: true },
-    }),
-    defineField({
-      name: 'street',
-      type: 'string',
-      title: 'Strasse',
-      group: 'basis',
-      fieldset: 'address',
-    }),
-    defineField({
-      name: 'zip',
-      type: 'string',
-      title: 'PLZ',
-      group: 'basis',
-      fieldset: 'address',
-    }),
-    defineField({
-      name: 'city',
-      type: 'string',
-      title: 'Ort',
-      group: 'basis',
-      fieldset: 'address',
-    }),
-    defineField({
-      name: 'country',
-      type: 'string',
-      title: 'Land',
-      group: 'basis',
-      fieldset: 'address',
-      initialValue: 'Schweiz',
-    }),
-    // --- Group: structure ---
-    defineField({
-      name: 'floors',
-      type: 'array',
-      title: 'Stockwerke',
-      group: 'structure',
-      of: [defineArrayMember({ type: 'floor' })],
-    }),
-    defineField({
-      name: 'zones',
-      type: 'array',
-      title: 'Zonen',
-      group: 'structure',
-      of: [defineArrayMember({ type: 'zone' })],
-    }),
-    // --- Group: dna ---
+
+    // --- Group: tech ---
     defineField({
       name: 'heatingType',
+      title: 'Heizungstyp',
       type: 'string',
-      title: 'Heizung',
-      group: 'dna',
-      fieldset: 'systems',
-      options: { list: heatingTypeOptions },
-    }),
-    defineField({
-      name: 'waterSupply',
-      type: 'string',
-      title: 'Wasserversorgung',
-      group: 'dna',
-      fieldset: 'systems',
-    }),
-    defineField({
-      name: 'ventilationType',
-      type: 'string',
-      title: 'Lüftung',
-      group: 'dna',
-      fieldset: 'systems',
+      group: 'tech',
+      options: {
+        list: [
+          { title: 'Gas', value: 'gas' },
+          { title: 'Öl', value: 'oil' },
+          { title: 'Wärmepumpe', value: 'heatpump' },
+          { title: 'Fernwärme', value: 'district' },
+        ],
+      },
     }),
     defineField({
       name: 'constructionYear',
-      type: 'number',
       title: 'Baujahr',
-      group: 'dna',
-      fieldset: 'stats',
-    }),
-    defineField({
-      name: 'lastRenovation',
       type: 'number',
-      title: 'Letzte Sanierung (Jahr)',
-      group: 'dna',
-      fieldset: 'stats',
+      group: 'tech',
+      validation: (rule) => rule.integer().min(1800).max(2100),
+    }),
+
+    // --- Group: access ---
+    defineField({
+      name: 'chatAccessPin',
+      title: 'Chat-Zugangs-PIN',
+      type: 'string',
+      group: 'access',
+      description: '4-stelliger PIN für den Chat-Zugang.',
+      validation: (rule) =>
+        rule.regex(/^\d{4}$/, { name: '4-digit PIN', invert: false }),
     }),
     defineField({
-      name: 'floorsCount',
-      type: 'number',
-      title: 'Anzahl Etagen',
-      group: 'dna',
-      fieldset: 'stats',
+      name: 'keySystem',
+      title: 'Schlüsselsystem',
+      type: 'string',
+      group: 'access',
     }),
+
+    // --- Group: services (CRITICAL) ---
     defineField({
-      name: 'unitsCount',
-      type: 'number',
-      title: 'Anzahl Einheiten',
-      group: 'dna',
-      fieldset: 'stats',
-    }),
-    defineField({
-      name: 'riskNotes',
-      type: 'text',
-      title: 'Risiko-Notizen',
-      description: 'Bekannte Schwachstellen für die KI-Kontextualisierung.',
-      group: 'dna',
-      rows: 4,
-    }),
-    // --- Group: docs ---
-    defineField({
-      name: 'certificates',
+      name: 'serviceProviders',
+      title: 'Dienstleister-Matrix',
       type: 'array',
-      title: 'Zertifikate',
-      group: 'docs',
-      of: [defineArrayMember({ type: 'buildingCertificate' })],
-    }),
-    defineField({
-      name: 'staticDocs',
-      type: 'array',
-      title: 'Statische Dokumente',
-      description: 'Pläne, Verträge, allgemeine Unterlagen.',
-      group: 'docs',
+      group: 'services',
       of: [
         defineArrayMember({
-          type: 'file',
-          options: { accept: '.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg' },
+          type: 'object',
+          name: 'serviceProviderEntry',
+          title: 'Eintrag',
+          fields: [
+            defineField({
+              name: 'role',
+              title: 'Rolle / Gewerk',
+              type: 'string',
+              options: { list: serviceRoleOptions },
+              validation: (rule) => rule.required(),
+            }),
+            defineField({
+              name: 'provider',
+              title: 'Dienstleister',
+              type: 'reference',
+              to: [{ type: 'provider' }],
+              validation: (rule) => rule.required(),
+            }),
+            defineField({
+              name: 'customNote',
+              title: 'Anmerkung',
+              type: 'string',
+            }),
+            defineField({
+              name: 'priority',
+              title: 'Priorität',
+              type: 'string',
+              options: {
+                list: [
+                  { title: 'Primär', value: 'primary' },
+                  { title: 'Backup', value: 'backup' },
+                ],
+              },
+              initialValue: 'primary',
+            }),
+          ],
+          preview: {
+            select: { role: 'role', provider: 'provider.companyName', priority: 'priority' },
+            prepare({ role, provider, priority }) {
+              return {
+                title: `${role ?? '–'} → ${provider ?? '–'}`,
+                subtitle: priority === 'backup' ? '⚠ Backup' : 'Primär',
+              }
+            },
+          },
         }),
       ],
     }),
   ],
   preview: {
-    select: {
-      name: 'name',
-      street: 'street',
-      zip: 'zip',
-      city: 'city',
-      country: 'country',
-      mainImage: 'mainImage',
-    },
-    prepare({ name, street, zip, city, country, mainImage }) {
-      const zipCity = [zip, city].filter(Boolean).join(' ')
-      const subtitle = [street, zipCity, country].filter(Boolean).join(', ')
+    select: { title: 'name', city: 'address.city' },
+    prepare({ title, city }) {
       return {
-        title: name || 'Unbenannt',
-        subtitle: subtitle || undefined,
-        media: mainImage || HomeIcon,
+        title: title || 'Unbenannt',
+        subtitle: city ?? '',
       }
     },
   },

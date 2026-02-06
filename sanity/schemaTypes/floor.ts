@@ -1,84 +1,114 @@
-import { StackIcon } from '@sanity/icons'
-import { defineType, defineField } from 'sanity'
-import { HierarchyBreadcrumbs } from '../components/HierarchyBreadcrumbs'
+import { defineType, defineField, defineArrayMember } from 'sanity'
+import { Layers } from 'lucide-react'
 
 export const floor = defineType({
   name: 'floor',
-  title: 'Etage',
+  title: 'Stockwerk / Ebene',
   type: 'document',
-  icon: StackIcon,
+  icon: Layers,
   fields: [
     defineField({
-      name: 'locationContext',
-      title: ' ',
-      type: 'string',
-      hidden: false,
-      components: {
-        input: HierarchyBreadcrumbs,
-      },
-      initialValue: 'Navigation',
+      name: 'tenant',
+      title: 'Mandant',
+      type: 'reference',
+      to: [{ type: 'tenant' }],
+      validation: (rule) => rule.required(),
     }),
     defineField({
-      name: 'name',
+      name: 'building',
+      title: 'Gebäude',
+      type: 'reference',
+      to: [{ type: 'building' }],
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'levelNumber',
+      title: 'Stockwerk-Nummer',
+      type: 'number',
+      description: 'z.B. -2, -1, 0 (EG), 1, 2 …',
+      validation: (rule) => rule.required().integer().min(-10).max(200),
+    }),
+    defineField({
+      name: 'type',
+      title: 'Typ',
       type: 'string',
-      title: 'Name',
+      options: {
+        list: [
+          { title: 'Innenbereich', value: 'indoor' },
+          { title: 'Aussenbereich', value: 'outdoor' },
+          { title: 'Technikgeschoss', value: 'technical' },
+          { title: 'Dach', value: 'roof' },
+        ],
+      },
+    }),
+    defineField({
+      name: 'title',
+      title: 'Bezeichnung',
+      type: 'string',
+      description: 'z.B. "Erdgeschoss", "1. OG", "Untergeschoss 2"',
     }),
     defineField({
       name: 'slug',
       title: 'Slug',
       type: 'slug',
-      options: {
-        source: 'name',
-        maxLength: 96,
-      },
-      validation: (Rule) => Rule.required(),
+      options: { source: 'title', maxLength: 96 },
     }),
     defineField({
-      name: 'level',
-      title: 'Etagen-Nummer (Logik)',
-      type: 'number',
-      description:
-        'z.B. -1 für Keller, 0 für EG, 1 für 1. Stock. Wichtig für die Sortierung.',
-      initialValue: 0,
+      name: 'floorPlan',
+      title: 'Grundriss',
+      type: 'image',
+      options: { hotspot: true },
     }),
     defineField({
-      name: 'building',
-      title: 'Gehört zu Gebäude',
-      type: 'reference',
-      to: [{ type: 'building' }],
-      readOnly: true,
-    }),
-    defineField({
-      name: 'description',
-      title: 'Beschreibung (Intern)',
-      type: 'text',
-      rows: 3,
-      description: 'Zusätzliche Infos für das AI-System (z.B. "Hauptzugang zur Technik")',
-    }),
-    defineField({
-      name: 'parentBuilding',
-      type: 'reference',
-      to: [{ type: 'building' }],
-      title: 'Gebäude',
-    }),
-    defineField({
-      name: 'parentSection',
-      type: 'string',
-      title: 'Gebäudeteil',
-    }),
-    defineField({
-      name: 'gebaeudeteil',
-      title: 'Gebäudeteil (Bereich)',
-      type: 'string',
-      description: 'z.B. Waschraum, Technikraum, Allgemein',
+      name: 'zones',
+      title: 'Zonen',
+      type: 'array',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'zoneEntry',
+          title: 'Zone',
+          fields: [
+            defineField({
+              name: 'name',
+              title: 'Name',
+              type: 'string',
+              validation: (rule) => rule.required(),
+            }),
+            defineField({
+              name: 'type',
+              title: 'Typ',
+              type: 'string',
+              options: {
+                list: [
+                  { title: 'Gemeinschaftsfläche', value: 'common' },
+                  { title: 'Sanitärbereich', value: 'sanitary' },
+                  { title: 'Erholungszone', value: 'recreation' },
+                  { title: 'Entsorgung', value: 'waste' },
+                ],
+              },
+            }),
+            defineField({
+              name: 'isPublic',
+              title: 'Öffentlich zugänglich',
+              type: 'boolean',
+              initialValue: false,
+            }),
+          ],
+          preview: {
+            select: { title: 'name', subtitle: 'type' },
+          },
+        }),
+      ],
     }),
   ],
   preview: {
-    select: { name: 'name', buildingName: 'parentBuilding.name', sectionName: 'parentSection' },
-    prepare({ name, buildingName, sectionName }) {
+    select: { title: 'title', level: 'levelNumber', building: 'building.name' },
+    prepare({ title, level, building }) {
+      const label = title || (level !== undefined ? `Ebene ${level}` : 'Unbenannt')
       return {
-        title: name,
-        subtitle: [buildingName, sectionName].filter(Boolean).join(' • ') || undefined,
+        title: label,
+        subtitle: building ?? '',
       }
     },
   },
