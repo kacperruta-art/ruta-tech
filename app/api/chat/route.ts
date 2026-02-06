@@ -49,15 +49,32 @@ interface ContextDoc {
 
 export async function POST(req: Request) {
   try {
-    // 1. Validate environment
+    // 1. Validate environment variables
+    const missingVars: string[] = []
+    
     if (!process.env.GOOGLE_GEMINI_API_KEY) {
-      console.error('[chat] Missing GOOGLE_GEMINI_API_KEY')
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+      missingVars.push('GOOGLE_GEMINI_API_KEY')
+    }
+    if (!process.env.SANITY_API_TOKEN) {
+      missingVars.push('SANITY_API_TOKEN')
+    }
+    if (!process.env.NEXT_PUBLIC_SANITY_PROJECT_ID) {
+      missingVars.push('NEXT_PUBLIC_SANITY_PROJECT_ID')
+    }
+    if (!process.env.NEXT_PUBLIC_SANITY_DATASET) {
+      missingVars.push('NEXT_PUBLIC_SANITY_DATASET')
+    }
+    
+    if (missingVars.length > 0) {
+      console.error('[chat] Missing environment variables:', missingVars.join(', '))
+      return NextResponse.json({ 
+        error: `Server configuration error: Missing ${missingVars.join(', ')}` 
+      }, { status: 500 })
     }
 
     if (!writeClient) {
-      console.error('[chat] Missing SANITY_API_TOKEN')
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+      console.error('[chat] writeClient not initialized')
+      return NextResponse.json({ error: 'Server configuration error: writeClient' }, { status: 500 })
     }
 
     // 2. Parse request body (ChatClient format)
