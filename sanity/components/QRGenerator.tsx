@@ -1,17 +1,29 @@
 'use client'
 
-import React, { useEffect, useState, useMemo } from 'react'
-import { QRCodeSVG } from 'qrcode.react'
-import { Box, Card, Flex, Grid, Heading, Stack, Text, Button } from '@sanity/ui'
-import { useClient } from 'sanity'
+import React, {useEffect, useState} from 'react'
+import {QRCodeSVG} from 'qrcode.react'
+import {
+  Card,
+  Flex,
+  Grid,
+  Heading,
+  Stack,
+  Text,
+  Button,
+  Box,
+  Spinner,
+} from '@sanity/ui'
+import {useClient} from 'sanity'
+import {Printer, Copy} from 'lucide-react'
 
 // ── Types ────────────────────────────────────────────────
 
-interface LinkedAsset {
+type ChildItem = {
   _id: string
-  name: string | null
-  qrCodeId: { current: string } | null
-  model: string | null
+  _type: string
+  name: string
+  slug?: {current: string}
+  qrCodeId?: {current: string}
 }
 
 interface DocumentDisplayed {
@@ -19,308 +31,280 @@ interface DocumentDisplayed {
   _type: string
   name?: string
   title?: string
-  tenant?: { _ref: string }
-  qrCodeId?: { current: string }
+  slug?: {current: string}
+  qrCodeId?: {current: string}
+  tenant?: {_ref: string}
 }
 
-// Types that are "containers" holding assets via the polymorphic location ref
-const CONTAINER_TYPES = ['building', 'floor', 'unit', 'property', 'parkingFacility']
+// ── Container types that display a child grid ────────────
 
-// ── Helpers ──────────────────────────────────────────────
+const CONTAINER_TYPES = [
+  'property',
+  'building',
+  'floor',
+  'unit',
+  'parkingFacility',
+  'outdoorArea',
+]
 
-function stripDraftPrefix(id: string): string {
-  return id.replace(/^drafts\./, '')
-}
+// ── Child queries per container type ─────────────────────
 
-function buildChatUrl(tenantSlug: string | null, assetSlug: string): string {
-  const origin =
-    typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
-  const tenant = tenantSlug || '_'
-  return `${origin}/${tenant}/chat/${assetSlug}`
+function getChildQuery(docType: string): string {
+  switch (docType) {
+    case 'unit':
+      return `*[_type == "asset" && location._ref == $id] { _id, _type, name, qrCodeId, slug } | order(name asc)`
+    case 'floor':
+      return `*[_type == "unit" && floor._ref == $id] { _id, _type, name, qrCodeId, slug } | order(name asc)`
+    case 'building':
+      return `*[
+        (_type == "floor" && building._ref == $id) ||
+        (_type == "asset" && location._ref == $id)
+      ] { _id, _type, name, qrCodeId, slug } | order(_type desc, name asc)`
+    case 'property':
+      return `*[_type == "building" && property._ref == $id] { _id, _type, name, qrCodeId, slug } | order(name asc)`
+    case 'parkingFacility':
+      return `*[_type == "parkingSpot" && facility._ref == $id] { _id, _type, "name": coalesce(name, "Platz " + string(number)), qrCodeId, slug } | order(name asc)`
+    case 'outdoorArea':
+      return `*[_type == "asset" && location._ref == $id] { _id, _type, name, qrCodeId, slug } | order(name asc)`
+    default:
+      return ''
+  }
 }
 
 // ── Component ────────────────────────────────────────────
 
-export function QRGenerator(props: { document: { displayed: DocumentDisplayed } }) {
-  const doc = props.document.displayed
-  const client = useClient({ apiVersion: '2024-01-01' })
+export function QRGenerator(props: {
+  documentId: string
+  document: {displayed: DocumentDisplayed}
+}) {
+  const {documentId, document} = props
+  const displayed = document.displayed
+  const client = useClient({apiVersion: '2024-01-01'})
 
+  const [baseUrl, setBaseUrl] = useState('https://app.ruta-tech.ch')
   const [tenantSlug, setTenantSlug] = useState<string | null>(null)
-  const [linkedAssets, setLinkedAssets] = useState<LinkedAsset[]>([])
+  const [children, setChildren] = useState<ChildItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  const documentId = stripDraftPrefix(doc._id)
-  const isAsset = doc._type === 'asset'
-  const isContainer = CONTAINER_TYPES.includes(doc._type)
+  const isContainer = CONTAINER_TYPES.includes(displayed._type)
 
-  // ── Effect 1: Resolve tenant slug ──────────────────────
+  // 1. Environment Detection
   useEffect(() => {
-    if (!doc.tenant?._ref) {
-      setTenantSlug(null)
-      return
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname
+      if (host === 'localhost' || host === '127.0.0.1') {
+        setBaseUrl(`http://${host}:3000`)
+      }
     }
-    const tenantId = stripDraftPrefix(doc.tenant._ref)
+  }, [])
 
-    client
-      .fetch<{ slug: string | null }>(
-        `*[_id == $id || _id == "drafts." + $id][0]{ "slug": slug.current }`,
-        { id: tenantId }
-      )
-      .then((res) => setTenantSlug(res?.slug ?? null))
-      .catch(() => setTenantSlug(null))
-  }, [client, doc.tenant?._ref])
-
-  // ── Effect 2: Fetch linked assets (for containers) ────
+  // 2. Fetch Tenant Slug + Children
   useEffect(() => {
-    if (!isContainer) {
-      setLinkedAssets([])
-      setLoading(false)
-      return
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        // A. Tenant Slug
+        let tSlug: string | null = null
+        if (displayed.tenant?._ref) {
+          tSlug = await client.fetch<string | null>(
+            `*[_type == "tenant" && _id == $id][0].slug.current`,
+            {id: displayed.tenant._ref.replace('drafts.', '')}
+          )
+        }
+        setTenantSlug(tSlug)
+
+        // B. Children (only for container types)
+        const cleanId = displayed._id?.replace('drafts.', '')
+        const query = getChildQuery(displayed._type)
+        if (query && cleanId) {
+          const res = await client.fetch<ChildItem[]>(query, {id: cleanId})
+          setChildren(res || [])
+        } else {
+          setChildren([])
+        }
+      } catch (err) {
+        console.error('[QRGenerator] Fetch error:', err)
+      } finally {
+        setLoading(false)
+      }
     }
+    fetchData()
+  }, [displayed._id, displayed._type, displayed.tenant?._ref, client])
 
-    setLoading(true)
-    client
-      .fetch<LinkedAsset[]>(
-        `*[_type == "asset" && location._ref == $docId]{
-          _id, name, qrCodeId, model
-        } | order(name asc)`,
-        { docId: documentId }
-      )
-      .then((res) => {
-        setLinkedAssets(res ?? [])
-        setLoading(false)
-      })
-      .catch(() => {
-        setLinkedAssets([])
-        setLoading(false)
-      })
-  }, [client, documentId, isContainer])
+  // Helper: build a chat URL for any item
+  const getUrl = (item: {
+    _id: string
+    slug?: {current: string}
+    qrCodeId?: {current: string}
+  }): string => {
+    if (!tenantSlug) return ''
+    const slug =
+      item.slug?.current ||
+      item.qrCodeId?.current ||
+      item._id.replace('drafts.', '')
+    return `${baseUrl}/${tenantSlug}/chat/${slug}`
+  }
 
-  // ── Render: Single Asset QR ────────────────────────────
-  if (isAsset) {
-    const slug = doc.qrCodeId?.current || documentId
-    const chatUrl = buildChatUrl(tenantSlug, slug)
+  const masterUrl = getUrl(displayed)
 
+  // ── Loading State ──────────────────────────────────────
+
+  if (loading) {
     return (
-      <Box padding={4}>
-        <Card padding={5} radius={3} shadow={1} tone="default">
+      <Box padding={5}>
+        <Flex align="center" justify="center">
+          <Spinner muted />
+        </Flex>
+      </Box>
+    )
+  }
+
+  // ── Render ─────────────────────────────────────────────
+
+  return (
+    <Box padding={4}>
+      <Stack space={5}>
+        {/* ── MASTER QR (The Container / Asset) ──────── */}
+        <Card padding={4} radius={3} shadow={2} tone="primary">
           <Flex direction="column" align="center" gap={4}>
-            <Heading as="h2" size={2}>
-              QR-Code: {doc.name || 'Unbenannt'}
+            <Heading size={3} style={{color: 'white'}}>
+              {isContainer ? 'Standort-QR: ' : ''}
+              {displayed.name || displayed.title || 'Unbenannt'}
             </Heading>
 
-            <Card padding={4} radius={2} tone="transparent" style={{ background: '#fff' }}>
-              <QRCodeSVG value={chatUrl} size={280} level="H" />
+            <Card padding={3} radius={2} style={{background: 'white'}}>
+              {masterUrl ? (
+                <QRCodeSVG value={masterUrl} size={200} level="H" />
+              ) : (
+                <Box padding={4}>
+                  <Text align="center" muted>
+                    Kein Mandant verknuepft. URL kann nicht generiert werden.
+                  </Text>
+                </Box>
+              )}
             </Card>
 
-            <Text size={1} muted style={{ wordBreak: 'break-all', textAlign: 'center' }}>
-              {chatUrl}
-            </Text>
-
-            {!tenantSlug && (
-              <Card padding={3} radius={2} tone="caution">
-                <Text size={1}>
-                  Mandant hat keinen Slug. Bitte Mandant-Dokument prüfen.
-                </Text>
-              </Card>
+            {masterUrl && (
+              <Text
+                size={1}
+                style={{
+                  color: 'white',
+                  opacity: 0.8,
+                  wordBreak: 'break-all',
+                  textAlign: 'center',
+                }}
+              >
+                {masterUrl}
+              </Text>
             )}
 
             <Flex gap={3}>
               <Button
-                text="Label drucken"
-                tone="primary"
+                icon={Printer}
+                text="Standort-QR Drucken"
+                mode="ghost"
+                style={{color: 'white'}}
                 onClick={() => window.print()}
               />
-              <Button
-                text="URL kopieren"
-                mode="ghost"
-                onClick={() => navigator.clipboard.writeText(chatUrl)}
-              />
+              {masterUrl && (
+                <Button
+                  icon={Copy}
+                  text="URL Kopieren"
+                  mode="ghost"
+                  style={{color: 'white'}}
+                  onClick={() => navigator.clipboard.writeText(masterUrl)}
+                />
+              )}
             </Flex>
           </Flex>
         </Card>
 
-        {/* Print-only section */}
-        <style>{`
-          @media print {
-            body * { visibility: hidden !important; }
-            .qr-print-label, .qr-print-label * { visibility: visible !important; }
-            .qr-print-label {
-              position: fixed; top: 50%; left: 50%;
-              transform: translate(-50%, -50%);
-            }
+        {/* ── CHILDREN GRID (The Inventory) ──────────── */}
+        {children.length > 0 && (
+          <Stack space={3}>
+            <Heading size={1}>
+              Enthaltene Objekte ({children.length})
+            </Heading>
+            <Grid columns={[1, 2, 3, 4]} gap={3}>
+              {children.map((child) => {
+                const childUrl = getUrl(child)
+                return (
+                  <Card
+                    key={child._id}
+                    padding={3}
+                    radius={2}
+                    border
+                    tone="default"
+                  >
+                    <Flex direction="column" align="center" gap={3}>
+                      <Text
+                        size={1}
+                        weight="bold"
+                        style={{textAlign: 'center'}}
+                      >
+                        {child.name || 'Unbenannt'}
+                      </Text>
+                      <Box padding={2} style={{background: 'white'}}>
+                        {childUrl ? (
+                          <QRCodeSVG value={childUrl} size={100} />
+                        ) : (
+                          <Text size={0} muted>
+                            —
+                          </Text>
+                        )}
+                      </Box>
+                      <Text
+                        size={0}
+                        muted
+                        style={{
+                          wordBreak: 'break-all',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {child._type}
+                      </Text>
+                    </Flex>
+                  </Card>
+                )
+              })}
+            </Grid>
+          </Stack>
+        )}
+
+        {/* ── Empty state for containers ──────────────── */}
+        {children.length === 0 && isContainer && (
+          <Card padding={3} tone="transparent" border>
+            <Text muted align="center">
+              Keine untergeordneten Objekte gefunden.
+            </Text>
+          </Card>
+        )}
+      </Stack>
+
+      {/* ── Print Styles ─────────────────────────────── */}
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          .qr-print-label, .qr-print-label * { visibility: visible !important; }
+          .qr-print-label {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
           }
-        `}</style>
-        <div className="qr-print-label" style={{ display: 'none' }}>
-          <div style={{ textAlign: 'center' }}>
-            <QRCodeSVG value={chatUrl} size={300} level="H" />
-            <p style={{ fontFamily: 'monospace', fontSize: 14, marginTop: 12 }}>
-              {doc.name || 'Asset'}
+        }
+      `}</style>
+      {masterUrl && (
+        <div className="qr-print-label" style={{display: 'none'}}>
+          <div style={{textAlign: 'center'}}>
+            <QRCodeSVG value={masterUrl} size={300} level="H" />
+            <p style={{fontFamily: 'monospace', fontSize: 14, marginTop: 12}}>
+              {displayed.name || displayed.title || 'Asset'}
             </p>
-            <p style={{ fontFamily: 'monospace', fontSize: 10, color: '#666' }}>
-              {chatUrl}
+            <p style={{fontFamily: 'monospace', fontSize: 10, color: '#666'}}>
+              {masterUrl}
             </p>
           </div>
         </div>
-      </Box>
-    )
-  }
-
-  // ── Render: Container — Master QR + Inventory Grid ──────
-  if (isContainer) {
-    const containerLabel = doc.name || doc.title || doc._type
-    const masterUrl = buildChatUrl(tenantSlug, documentId)
-
-    return (
-      <Box padding={4}>
-        <Stack space={5}>
-
-          {/* ── Master QR (the container itself) ──────────── */}
-          <Card padding={5} radius={3} shadow={2} tone="primary">
-            <Flex direction="column" align="center" gap={4}>
-              <Heading as="h2" size={3}>
-                Standort-QR: {containerLabel}
-              </Heading>
-
-              <Card padding={4} radius={2} tone="transparent" style={{ background: '#fff' }}>
-                <QRCodeSVG value={masterUrl} size={260} level="H" />
-              </Card>
-
-              <Text size={1} muted style={{ wordBreak: 'break-all', textAlign: 'center' }}>
-                {masterUrl}
-              </Text>
-
-              {!tenantSlug && (
-                <Card padding={3} radius={2} tone="caution">
-                  <Text size={1}>
-                    Mandant hat keinen Slug. Bitte Mandant-Dokument prüfen.
-                  </Text>
-                </Card>
-              )}
-
-              <Flex gap={3}>
-                <Button
-                  text="Standort-QR drucken"
-                  tone="primary"
-                  onClick={() => window.print()}
-                />
-                <Button
-                  text="URL kopieren"
-                  mode="ghost"
-                  onClick={() => navigator.clipboard.writeText(masterUrl)}
-                />
-              </Flex>
-            </Flex>
-          </Card>
-
-          {/* Print-only: Master QR */}
-          <style>{`
-            @media print {
-              body * { visibility: hidden !important; }
-              .qr-print-label, .qr-print-label * { visibility: visible !important; }
-              .qr-print-label {
-                position: fixed; top: 50%; left: 50%;
-                transform: translate(-50%, -50%);
-              }
-            }
-          `}</style>
-          <div className="qr-print-label" style={{ display: 'none' }}>
-            <div style={{ textAlign: 'center' }}>
-              <QRCodeSVG value={masterUrl} size={300} level="H" />
-              <p style={{ fontFamily: 'monospace', fontSize: 14, marginTop: 12 }}>
-                {containerLabel}
-              </p>
-              <p style={{ fontFamily: 'monospace', fontSize: 10, color: '#666' }}>
-                {masterUrl}
-              </p>
-            </div>
-          </div>
-
-          {/* ── Divider ───────────────────────────────────── */}
-          <Card borderBottom padding={0} />
-
-          {/* ── Inventory Grid (child assets) ─────────────── */}
-          <Stack space={4}>
-            <Heading as="h3" size={1}>
-              Zugeordnete Assets
-            </Heading>
-
-            {loading && (
-              <Card padding={4} tone="transparent">
-                <Text size={2} muted>Lade Assets…</Text>
-              </Card>
-            )}
-
-            {!loading && linkedAssets.length === 0 && (
-              <Card padding={4} radius={2} tone="transparent">
-                <Text size={2} muted>
-                  Keine Assets an diesem Standort zugeordnet.
-                </Text>
-              </Card>
-            )}
-
-            {!loading && linkedAssets.length > 0 && (
-              <>
-                <Text size={1} muted>
-                  {linkedAssets.length} Asset{linkedAssets.length !== 1 ? 's' : ''} gefunden
-                </Text>
-                <Grid columns={[1, 2, 3]} gap={4}>
-                  {linkedAssets.map((asset) => {
-                    const slug = asset.qrCodeId?.current || stripDraftPrefix(asset._id)
-                    const chatUrl = buildChatUrl(tenantSlug, slug)
-
-                    return (
-                      <Card key={asset._id} padding={3} radius={2} shadow={1} tone="default">
-                        <Flex direction="column" align="center" gap={3}>
-                          <Card
-                            padding={2}
-                            radius={2}
-                            tone="transparent"
-                            style={{ background: '#fff' }}
-                          >
-                            <QRCodeSVG value={chatUrl} size={140} level="M" />
-                          </Card>
-                          <Text size={1} weight="bold" align="center">
-                            {asset.name || 'Unbenannt'}
-                          </Text>
-                          {asset.model && (
-                            <Text size={0} muted align="center">
-                              {asset.model}
-                            </Text>
-                          )}
-                          <Text
-                            size={0}
-                            muted
-                            style={{
-                              wordBreak: 'break-all',
-                              textAlign: 'center',
-                              maxWidth: '100%',
-                            }}
-                          >
-                            {chatUrl}
-                          </Text>
-                        </Flex>
-                      </Card>
-                    )
-                  })}
-                </Grid>
-              </>
-            )}
-          </Stack>
-
-        </Stack>
-      </Box>
-    )
-  }
-
-  // ── Fallback ───────────────────────────────────────────
-  return (
-    <Box padding={4}>
-      <Card padding={4} radius={2} tone="transparent">
-        <Text muted>
-          QR-Ansicht ist für diesen Dokumenttyp ({doc._type}) nicht verfügbar.
-        </Text>
-      </Card>
+      )}
     </Box>
   )
 }

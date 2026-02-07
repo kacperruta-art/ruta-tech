@@ -1,60 +1,88 @@
-import { defineType, defineField, defineArrayMember } from 'sanity'
-import { Car } from 'lucide-react'
+import {defineType, defineField} from 'sanity'
+import {Car, Zap, Lock, CircleParking, QrCode} from 'lucide-react'
+import {QRCodeInput} from '../components/QRCodeInput'
 
+// 1. PARKING SPOT (Child Document)
 export const parkingSpot = defineType({
   name: 'parkingSpot',
-  title: 'Parkplatz-Eintrag',
-  type: 'object',
+  title: 'Parkplatz',
+  type: 'document',
+  icon: CircleParking,
+  groups: [
+    {name: 'core', title: 'Basisdaten', default: true},
+    {name: 'rent', title: 'Vermietung', icon: Lock},
+    {name: 'tech', title: 'Technik', icon: Zap},
+    {name: 'identification', title: 'QR & ID', icon: QrCode},
+  ],
   fields: [
+    defineField({
+      name: 'facility',
+      title: 'Gehoert zu Parkanlage',
+      type: 'reference',
+      to: [{type: 'parkingFacility'}],
+      group: 'core',
+      validation: (rule) => rule.required(),
+    }),
     defineField({
       name: 'number',
       title: 'Nummer',
       type: 'string',
+      group: 'core',
       validation: (rule) => rule.required(),
     }),
     defineField({
-      name: 'type',
-      title: 'Typ',
+      name: 'status',
+      title: 'Status',
       type: 'string',
+      group: 'rent',
       options: {
         list: [
-          { title: 'Standard', value: 'standard' },
-          { title: 'E-Fahrzeug', value: 'ev' },
-          { title: 'Besucher', value: 'visitor' },
+          {title: 'Vermietet', value: 'rented'},
+          {title: 'Leer', value: 'vacant'},
+          {title: 'Besucher', value: 'visitor'},
         ],
       },
-      initialValue: 'standard',
+      initialValue: 'vacant',
     }),
     defineField({
-      name: 'linkedUnit',
-      title: 'Zugeordnete Einheit',
+      name: 'tenant',
+      title: 'Mieter',
       type: 'reference',
-      to: [{ type: 'unit' }],
+      to: [{type: 'user'}],
+      group: 'rent',
+      hidden: ({parent}) => parent?.status !== 'rented',
     }),
     defineField({
-      name: 'features',
-      title: 'Ausstattung',
-      type: 'array',
-      of: [{ type: 'string' }],
-      options: {
-        list: [
-          { title: 'E-Ladestation', value: 'ev_charger' },
-          { title: 'Aufbewahrungsbox', value: 'storage_box' },
-        ],
-      },
+      name: 'isElectric',
+      title: 'E-Ladestation',
+      type: 'boolean',
+      group: 'tech',
+      initialValue: false,
+    }),
+
+    // === QR & Identification ===
+    defineField({
+      name: 'qrCodeGenerator',
+      title: 'QR-Code Etikette',
+      type: 'string',
+      components: {input: QRCodeInput},
+      group: 'identification',
+      readOnly: true,
     }),
   ],
   preview: {
-    select: { number: 'number', type: 'type' },
-    prepare({ number, type }) {
+    select: {number: 'number', status: 'status', facility: 'facility.name'},
+    prepare({number, status, facility}) {
+      const statusLabel = status === 'rented' ? 'Vermietet' : status === 'visitor' ? 'Besucher' : 'Leer'
       return {
-        title: `PP ${number ?? '–'}`,
-        subtitle: type ?? '',
+        title: `PP ${number}`,
+        subtitle: `${facility || ''} · ${statusLabel}`,
       }
     },
   },
 })
 
+// 2. PARKING FACILITY (Parent Document)
 export const parkingFacility = defineType({
   name: 'parkingFacility',
   title: 'Parkanlage',
@@ -65,14 +93,14 @@ export const parkingFacility = defineType({
       name: 'tenant',
       title: 'Mandant',
       type: 'reference',
-      to: [{ type: 'tenant' }],
+      to: [{type: 'tenant'}],
       validation: (rule) => rule.required(),
     }),
     defineField({
       name: 'property',
-      title: 'Liegenschaft / Areal',
+      title: 'Liegenschaft',
       type: 'reference',
-      to: [{ type: 'property' }],
+      to: [{type: 'property'}],
       validation: (rule) => rule.required(),
     }),
     defineField({
@@ -82,76 +110,29 @@ export const parkingFacility = defineType({
       validation: (rule) => rule.required(),
     }),
     defineField({
-      name: 'slug',
-      title: 'Slug',
-      type: 'slug',
-      options: { source: 'name', maxLength: 96 },
-    }),
-    defineField({
       name: 'type',
       title: 'Typ',
       type: 'string',
       options: {
         list: [
-          { title: 'Tiefgarage', value: 'underground' },
-          { title: 'Aussenparkplatz', value: 'outdoor' },
+          {title: 'Tiefgarage', value: 'underground'},
+          {title: 'Aussenparkplatz', value: 'outdoor'},
         ],
       },
     }),
     defineField({
-      name: 'connectedBuildings',
-      title: 'Zugehörige Gebäude',
-      type: 'array',
-      of: [{ type: 'reference', to: [{ type: 'building' }] }],
-    }),
-    defineField({
-      name: 'gateAccess',
-      title: 'Zufahrtskontrolle',
-      type: 'object',
-      fields: [
-        defineField({
-          name: 'method',
-          title: 'Methode',
-          type: 'string',
-          options: {
-            list: [
-              { title: 'Fernbedienung', value: 'remote' },
-              { title: 'Badge / Chip', value: 'badge' },
-              { title: 'Code', value: 'code' },
-              { title: 'App', value: 'app' },
-            ],
-          },
-        }),
-        defineField({
-          name: 'code',
-          title: 'Zugangscode',
-          type: 'string',
-        }),
-        defineField({
-          name: 'frequency',
-          title: 'Frequenz (MHz)',
-          type: 'string',
-          description: 'z.B. "868.3 MHz"',
-        }),
-      ],
-    }),
-    defineField({
-      name: 'spots',
-      title: 'Parkplätze',
-      type: 'array',
-      of: [
-        defineArrayMember({
-          type: 'parkingSpot',
-        }),
-      ],
+      name: 'maxHeight',
+      title: 'Max. Durchfahrtshoehe (m)',
+      type: 'number',
     }),
   ],
   preview: {
-    select: { title: 'name', type: 'type' },
-    prepare({ title, type }) {
+    select: {title: 'name', type: 'type'},
+    prepare({title, type}) {
       return {
-        title: title || 'Parkanlage',
-        subtitle: type === 'underground' ? 'Tiefgarage' : type === 'outdoor' ? 'Aussen' : '',
+        title: title,
+        subtitle: type === 'underground' ? 'Tiefgarage' : 'Aussen',
+        media: Car,
       }
     },
   },

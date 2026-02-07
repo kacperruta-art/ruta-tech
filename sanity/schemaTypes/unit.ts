@@ -1,5 +1,6 @@
-import { defineType, defineField, defineArrayMember } from 'sanity'
-import { DoorOpen } from 'lucide-react'
+import {defineType, defineField} from 'sanity'
+import {DoorOpen, Ruler, FileBadge, ShieldAlert, Users, Box, QrCode} from 'lucide-react'
+import {QRCodeInput} from '../components/QRCodeInput'
 
 export const unit = defineType({
   name: 'unit',
@@ -7,42 +8,30 @@ export const unit = defineType({
   type: 'document',
   icon: DoorOpen,
   groups: [
-    { name: 'core', title: 'Grunddaten', default: true },
-    { name: 'people', title: 'Personen' },
-    { name: 'inventory', title: 'Inventar' },
-    { name: 'security', title: 'Sicherheit' },
+    {name: 'core', title: 'Basisdaten', default: true},
+    {name: 'admin', title: 'Register & IDs', icon: FileBadge},
+    {name: 'specs', title: 'Flaechen & Zimmer', icon: Ruler},
+    {name: 'tech', title: 'Technik & Sicherheit', icon: ShieldAlert},
+    {name: 'people', title: 'Personen', icon: Users},
+    {name: 'inventory', title: 'Inventar', icon: Box},
+    {name: 'identification', title: 'QR & ID', icon: QrCode},
   ],
   fields: [
+    // === Group: core ===
     defineField({
       name: 'tenant',
       title: 'Mandant',
       type: 'reference',
-      to: [{ type: 'tenant' }],
-      validation: (rule) => rule.required(),
-    }),
-
-    // --- Group: core ---
-    defineField({
-      name: 'building',
-      title: 'Gebäude',
-      type: 'reference',
-      to: [{ type: 'building' }],
+      to: [{type: 'tenant'}],
       group: 'core',
       validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'floor',
-      title: 'Stockwerk',
-      type: 'reference',
-      to: [{ type: 'floor' }],
-      group: 'core',
     }),
     defineField({
       name: 'name',
-      title: 'Bezeichnung',
+      title: 'Interne Bezeichnung',
       type: 'string',
       group: 'core',
-      description: 'z.B. "Wohnung 3.01", "Büro 2A"',
+      description: 'z.B. "Wohnung 3.01" oder "Ladenflaeche EG"',
       validation: (rule) => rule.required(),
     }),
     defineField({
@@ -50,19 +39,22 @@ export const unit = defineType({
       title: 'Slug',
       type: 'slug',
       group: 'core',
-      options: { source: 'name', maxLength: 96 },
+      options: {source: 'name', maxLength: 96},
     }),
     defineField({
-      name: 'type',
-      title: 'Nutzungsart',
-      type: 'string',
+      name: 'building',
+      title: 'Gebaeude',
+      type: 'reference',
+      to: [{type: 'building'}],
       group: 'core',
-      options: {
-        list: [
-          { title: 'Wohnnutzung', value: 'residential' },
-          { title: 'Gewerbenutzung', value: 'commercial' },
-        ],
-      },
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'floor',
+      title: 'Stockwerk',
+      type: 'reference',
+      to: [{type: 'floor'}],
+      group: 'core',
     }),
     defineField({
       name: 'status',
@@ -71,164 +63,171 @@ export const unit = defineType({
       group: 'core',
       options: {
         list: [
-          { title: 'Belegt', value: 'occupied' },
-          { title: 'Leer', value: 'vacant' },
-          { title: 'Renovation', value: 'renovation' },
+          {title: 'Vermietet / Belegt', value: 'occupied'},
+          {title: 'Leerstehend', value: 'vacant'},
+          {title: 'In Sanierung', value: 'renovation'},
+          {title: 'Reserviert', value: 'reserved'},
         ],
       },
-      initialValue: 'vacant',
+      initialValue: 'occupied',
+    }),
+    defineField({
+      name: 'usageType',
+      title: 'Nutzungsart',
+      type: 'string',
+      group: 'core',
+      options: {
+        list: [
+          {title: 'Wohnen', value: 'residential'},
+          {title: 'Buero / Gewerbe', value: 'commercial'},
+          {title: 'Gastronomie', value: 'gastro'},
+          {title: 'Lager / Archiv', value: 'storage'},
+        ],
+      },
+      initialValue: 'residential',
     }),
 
-    // --- Group: people ---
+    // === Group: admin (GWR Data) ===
+    defineField({
+      name: 'ewid',
+      title: 'EWID (Amtliche Wohnungs-ID)',
+      type: 'string',
+      group: 'admin',
+      description: 'Code gemaess GWR (z.B. W-01). Wichtig fuer Meldewesen.',
+    }),
+    defineField({
+      name: 'adminNumber',
+      title: 'Objekt-Nr. (Verwaltung)',
+      type: 'string',
+      group: 'admin',
+      description:
+        'Nummer aus der Buchhaltungs-Software (z.B. 10.202.01).',
+    }),
+
+    // === Group: specs (Metrics) ===
+    defineField({
+      name: 'rooms',
+      title: 'Zimmerzahl',
+      type: 'number',
+      group: 'specs',
+      description: 'z.B. 3.5 oder 4.0',
+    }),
+    defineField({
+      name: 'areaHnf',
+      title: 'Hauptnutzflaeche (HNF m2)',
+      type: 'number',
+      group: 'specs',
+    }),
+    defineField({
+      name: 'areaOutside',
+      title: 'Aussenflaeche (Balkon/Terrasse m2)',
+      type: 'number',
+      group: 'specs',
+    }),
+    defineField({
+      name: 'floorPlan',
+      title: 'Wohnungsgrundriss',
+      type: 'image',
+      group: 'specs',
+      options: {hotspot: true},
+    }),
+
+    // === Group: tech (Emergency Info) ===
+    defineField({
+      name: 'waterShutoffLocation',
+      title: 'Standort Wasser-Absperrhahn',
+      type: 'string',
+      group: 'tech',
+      description:
+        'Wo muss der Mieter drehen, wenn Wasser auslaeuft? (z.B. "Bad unter Lavabo")',
+    }),
+    defineField({
+      name: 'fuseBoxLocation',
+      title: 'Standort Sicherungskasten',
+      type: 'string',
+      group: 'tech',
+      description: 'z.B. "Korridor, oben links"',
+    }),
+    defineField({
+      name: 'cellarNumber',
+      title: 'Kellerabteil Nr.',
+      type: 'string',
+      group: 'tech',
+    }),
+    defineField({
+      name: 'mailboxNumber',
+      title: 'Briefkasten Nr.',
+      type: 'string',
+      group: 'tech',
+    }),
+
+    // === Group: people ===
     defineField({
       name: 'tenants',
-      title: 'Mieter (Vertragspartner)',
+      title: 'Hauptmieter (Vertragspartner)',
       type: 'array',
       group: 'people',
-      of: [{ type: 'reference', to: [{ type: 'user' }] }],
+      of: [{type: 'reference', to: [{type: 'user'}]}],
     }),
     defineField({
       name: 'residents',
-      title: 'Bewohner',
+      title: 'Weitere Bewohner',
       type: 'array',
       group: 'people',
-      of: [{ type: 'reference', to: [{ type: 'user' }] }],
+      of: [{type: 'reference', to: [{type: 'user'}]}],
     }),
 
-    // --- Group: inventory ---
+    // === Group: inventory ===
     defineField({
-      name: 'smartAssets',
-      title: 'Smart Assets (QR-aktiv)',
-      type: 'array',
+      name: 'inventoryNote',
+      title: 'Inventar-Notiz',
+      type: 'text',
+      rows: 3,
       group: 'inventory',
-      of: [{ type: 'reference', to: [{ type: 'asset' }] }],
-      description: 'Aktive Anlagen mit QR-Code.',
+      description:
+        'Generelle Bemerkung zur Ausstattung (Details bitte als Assets erfassen).',
     }),
     defineField({
-      name: 'fittings',
-      title: 'Ausstattung (Passiv)',
+      name: 'smartDevices',
+      title: 'Verknuepfte Smart-Geraete',
       type: 'array',
       group: 'inventory',
-      of: [
-        defineArrayMember({
-          type: 'object',
-          name: 'fittingEntry',
-          title: 'Ausstattungs-Element',
-          fields: [
-            defineField({
-              name: 'category',
-              title: 'Kategorie',
-              type: 'string',
-              options: {
-                list: [
-                  { title: 'Böden', value: 'floors' },
-                  { title: 'Wände', value: 'walls' },
-                  { title: 'Fenster', value: 'windows' },
-                  { title: 'Türen', value: 'doors' },
-                  { title: 'Küche', value: 'kitchen' },
-                  { title: 'Bad', value: 'bathroom' },
-                ],
-              },
-              validation: (rule) => rule.required(),
-            }),
-            defineField({
-              name: 'material',
-              title: 'Material',
-              type: 'string',
-            }),
-            defineField({
-              name: 'condition',
-              title: 'Zustand',
-              type: 'string',
-              options: {
-                list: [
-                  { title: 'Neuwertig', value: 'new' },
-                  { title: 'Gut', value: 'good' },
-                  { title: 'Abgenutzt', value: 'worn' },
-                  { title: 'Defekt', value: 'defective' },
-                ],
-              },
-            }),
-            defineField({
-              name: 'installYear',
-              title: 'Einbaujahr',
-              type: 'number',
-              validation: (rule) => rule.integer().min(1900).max(2100),
-            }),
-          ],
-          preview: {
-            select: { category: 'category', material: 'material', condition: 'condition' },
-            prepare({ category, material, condition }) {
-              return {
-                title: category ?? 'Eintrag',
-                subtitle: [material, condition].filter(Boolean).join(' · '),
-              }
-            },
-          },
-        }),
-      ],
+      of: [{type: 'reference', to: [{type: 'asset'}]}],
+      description: 'Geraete mit direkter Digitalanbindung.',
     }),
 
-    // --- Group: security ---
+    // === QR & Identification ===
     defineField({
-      name: 'keyRegistry',
-      title: 'Schlüsselregister',
-      type: 'array',
-      group: 'security',
-      of: [
-        defineArrayMember({
-          type: 'object',
-          name: 'keyEntry',
-          title: 'Schlüssel',
-          fields: [
-            defineField({
-              name: 'keyNumber',
-              title: 'Schlüssel-Nr.',
-              type: 'string',
-              validation: (rule) => rule.required(),
-            }),
-            defineField({
-              name: 'holder',
-              title: 'Inhaber',
-              type: 'reference',
-              to: [{ type: 'user' }],
-            }),
-            defineField({
-              name: 'type',
-              title: 'Typ',
-              type: 'string',
-            }),
-            defineField({
-              name: 'issueDate',
-              title: 'Ausgabedatum',
-              type: 'date',
-            }),
-            defineField({
-              name: 'isLost',
-              title: 'Verloren',
-              type: 'boolean',
-              initialValue: false,
-            }),
-          ],
-          preview: {
-            select: { key: 'keyNumber', lost: 'isLost' },
-            prepare({ key, lost }) {
-              return {
-                title: key ?? 'Schlüssel',
-                subtitle: lost ? '🔴 Verloren' : '🟢 Aktiv',
-              }
-            },
-          },
-        }),
-      ],
+      name: 'qrCodeGenerator',
+      title: 'QR-Code Etikette',
+      type: 'string',
+      components: {input: QRCodeInput},
+      group: 'identification',
+      readOnly: true,
     }),
   ],
   preview: {
-    select: { title: 'name', status: 'status', building: 'building.name' },
-    prepare({ title, status, building }) {
+    select: {
+      name: 'name',
+      rooms: 'rooms',
+      status: 'status',
+      building: 'building.name',
+    },
+    prepare({name, rooms, status, building}) {
+      const statusLabel =
+        status === 'vacant'
+          ? 'Leer'
+          : status === 'renovation'
+            ? 'Sanierung'
+            : status === 'reserved'
+              ? 'Reserviert'
+              : 'Belegt'
       return {
-        title: title || 'Unbenannt',
-        subtitle: [building, status].filter(Boolean).join(' · '),
+        title: name || 'Unbenannt',
+        subtitle: [building, rooms ? `${rooms} Zi.` : '', statusLabel]
+          .filter(Boolean)
+          .join(' · '),
+        media: DoorOpen,
       }
     },
   },

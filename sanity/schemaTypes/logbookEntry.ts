@@ -35,6 +35,7 @@ export const logbookEntry = defineType({
         { type: 'unit' },            // Einheit
         { type: 'parkingFacility' }, // Parkplatz
         { type: 'asset' },           // Anlage
+        { type: 'outdoorArea' },     // Aussenanlage
       ],
       description: 'Das betroffene Objekt für die Historie auswählen.', // German description for user
       validation: (rule) => rule.required(),
@@ -114,6 +115,16 @@ export const logbookEntry = defineType({
       title: 'Dokumente',
       type: 'array',
       of: [{ type: 'file' }, { type: 'image' }],
+    }),
+
+    // 10. SOURCE TICKET (Back-link)
+    defineField({
+      name: 'sourceTicket',
+      title: 'Ursprungs-Ticket',
+      type: 'reference',
+      to: [{ type: 'ticket' }],
+      readOnly: true,
+      description: 'Das Ticket, aus dem dieser Eintrag generiert wurde.',
     }),
   ],
 

@@ -89,11 +89,13 @@ export async function POST(req: Request) {
 
     // 2. Parse request body (ChatClient format)
     const body = await req.json()
-    const { message, pin, assetId, image } = body as {
+    const { message, pin, assetId, image, userId, userName } = body as {
       message?: string
       pin?: string
       assetId?: string
       image?: string
+      userId?: string
+      userName?: string
     }
 
     // 3. Validate required fields
@@ -200,17 +202,15 @@ Antworte auf Deutsch (Schweizer Hochdeutsch).`
 
         const doc = await writeClient.create({
           _type: 'ticket',
-          status: 'pending_approval',
           title: args.title,
           description: args.description,
           priority: args.priority,
-          scope: { _type: 'reference', _ref: scopeId },
+          status: 'pending_approval',
           tenant: { _type: 'reference', _ref: tenantId },
-          reportedByName: 'Chat-Benutzer',
-          locationContext: {
-            buildingName: buildingName,
-            assetName: assetName,
-          },
+          scope: { _type: 'reference', _ref: scopeId },
+          ...(userId
+            ? { reportedByUser: { _type: 'reference', _ref: userId } }
+            : { reportedByName: userName || 'Gast' }),
         })
 
         console.log('[createTicket] Created:', doc._id)

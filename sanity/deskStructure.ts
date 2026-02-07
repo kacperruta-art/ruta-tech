@@ -3,361 +3,602 @@ import type {
   StructureResolver,
 } from 'sanity/structure'
 import {
-  Building2,
-  Wrench,
-  User,
+  ClipboardList,
+  AlertCircle,
+  Clock,
+  CheckCircle2,
+  LayoutDashboard,
   Users,
-  MapPin,
   Home,
+  Building2,
   Layers,
-  DoorOpen,
+  Box,
   Car,
-  Ticket,
+  FileText,
   BookOpen,
-  Package,
-  Pencil,
-  FolderTree,
-  Upload,
-  QrCode,
-  Briefcase,
+  DoorOpen,
+  Trees,
+  CalendarClock,
+  CircleParking,
+  Gauge,
 } from 'lucide-react'
+import {QRGenerator} from './components/QRGenerator'
+import {ServiceHistoryView} from './components/ServiceHistoryView'
 
-import { QRGenerator } from './components/QRGenerator'
-import { MassImport } from './components/MassImport'
-
-// ── Type alias for brevity ───────────────────────────────
-type SB = Parameters<StructureResolver>[0]
-
-// Types that get the "QR Inventory" tab
-const QR_INVENTORY_TYPES = ['property', 'building', 'floor', 'unit', 'parkingFacility']
-
-// All types handled in the sidebar (used to hide auto-generated duplicates)
-const LISTED_TYPES = [
-  'tenant',
-  'provider',
-  'user',
+// Schema types that get the "Service-Historie" tab
+const TYPES_WITH_HISTORY = [
   'property',
   'building',
   'floor',
   'unit',
-  'parkingFacility',
-  'ticket',
-  'logbookEntry',
   'asset',
+  'parkingFacility',
+  'outdoorArea',
 ]
 
-// ── View helpers ─────────────────────────────────────────
+// Container types that show the batch QR grid
+const CONTAINER_TYPES = [
+  'property', 'building', 'floor', 'unit', 'parkingFacility', 'outdoorArea',
+]
 
-/** Build the correct view tabs for a given schema type */
-function viewsFor(S: SB, schemaType: string) {
-  if (schemaType === 'tenant') {
-    return [
-      S.view.form(),
-      S.view.component(MassImport).title('Mass Import').icon(Upload),
-    ]
+// Leaf types that show a single QR code
+const LEAF_QR_TYPES = ['asset', 'parkingSpot']
+
+// Shared helper: builds the views array for any schema type.
+// Used by BOTH defaultDocumentNode AND explicit S.document() nodes in the tree.
+function getDocumentViews(S: any, schemaType: string) {
+  const views = [S.view.form().title('Bearbeiten')]
+
+  if (CONTAINER_TYPES.includes(schemaType)) {
+    views.push(S.view.component(QRGenerator).title('QR Codes Liste'))
+  } else if (LEAF_QR_TYPES.includes(schemaType)) {
+    views.push(S.view.component(QRGenerator).title('QR Code'))
   }
-  if (schemaType === 'asset') {
-    return [
-      S.view.form(),
-      S.view.component(QRGenerator).title('QR Code').icon(QrCode),
-    ]
+
+  if (TYPES_WITH_HISTORY.includes(schemaType)) {
+    views.push(
+      S.view.component(ServiceHistoryView).title('Service-Historie').icon(Clock)
+    )
   }
-  if (QR_INVENTORY_TYPES.includes(schemaType)) {
-    return [
-      S.view.form(),
-      S.view.component(QRGenerator).title('QR Export').icon(QrCode),
-    ]
-  }
-  return [S.view.form()]
+
+  return views
 }
 
-/** Create an "Edit" document node with proper view tabs */
-function editNode(S: SB, id: string, schemaType: string) {
-  return S.document()
-    .documentId(id)
-    .schemaType(schemaType)
-    .views(viewsFor(S, schemaType))
-}
-
-// ── Level 4: Floor ───────────────────────────────────────
-
-function floorView(S: SB, floorId: string) {
-  return S.list()
-    .title('Ebene')
-    .items([
-      S.listItem()
-        .title('Ebene bearbeiten')
-        .icon(Pencil)
-        .child(editNode(S, floorId, 'floor')),
-
-      S.listItem()
-        .title('Nutzungseinheiten')
-        .icon(DoorOpen)
-        .child(
-          S.documentTypeList('unit')
-            .title('Nutzungseinheiten')
-            .filter('_type == "unit" && floor._ref == $floorId')
-            .params({ floorId })
-            .child((unitId) =>
-              S.list()
-                .title('Einheit')
-                .items([
-                  S.listItem()
-                    .title('Einheit bearbeiten')
-                    .icon(Pencil)
-                    .child(editNode(S, unitId, 'unit')),
-
-                  S.listItem()
-                    .title('Assets in Einheit')
-                    .icon(Package)
-                    .child(
-                      S.documentTypeList('asset')
-                        .title('Assets in Einheit')
-                        .filter('_type == "asset" && location._ref == $unitId')
-                        .params({ unitId })
-                    ),
-                ])
-            )
-        ),
-
-      S.listItem()
-        .title('Assets auf Ebene')
-        .icon(Package)
-        .child(
-          S.documentTypeList('asset')
-            .title('Assets auf Ebene')
-            .filter('_type == "asset" && location._ref == $floorId')
-            .params({ floorId })
-        ),
-    ])
-}
-
-// ── Level 3: Building ────────────────────────────────────
-
-function buildingView(S: SB, buildingId: string) {
-  return S.list()
-    .title('Gebäude')
-    .items([
-      S.listItem()
-        .title('Gebäude bearbeiten')
-        .icon(Pencil)
-        .child(editNode(S, buildingId, 'building')),
-
-      S.listItem()
-        .title('Ebenen / Stockwerke')
-        .icon(Layers)
-        .child(
-          S.documentTypeList('floor')
-            .title('Ebenen / Stockwerke')
-            .filter('_type == "floor" && building._ref == $buildingId')
-            .params({ buildingId })
-            .child((floorId) => floorView(S, floorId))
-        ),
-
-      S.listItem()
-        .title('Direkte Assets (Gebäude)')
-        .icon(Package)
-        .child(
-          S.documentTypeList('asset')
-            .title('Direkte Assets')
-            .filter('_type == "asset" && location._ref == $buildingId')
-            .params({ buildingId })
-        ),
-    ])
-}
-
-// ── Level 2: Property ────────────────────────────────────
-
-function propertyView(S: SB, propertyId: string) {
-  return S.list()
-    .title('Liegenschaft')
-    .items([
-      S.listItem()
-        .title('Liegenschaft bearbeiten')
-        .icon(Pencil)
-        .child(editNode(S, propertyId, 'property')),
-
-      S.listItem()
-        .title('Gebäude')
-        .icon(Home)
-        .child(
-          S.documentTypeList('building')
-            .title('Gebäude')
-            .filter('_type == "building" && property._ref == $propertyId')
-            .params({ propertyId })
-            .child((buildingId) => buildingView(S, buildingId))
-        ),
-
-      S.listItem()
-        .title('Garagen / Parkanlagen')
-        .icon(Car)
-        .child(
-          S.documentTypeList('parkingFacility')
-            .title('Garagen / Parkanlagen')
-            .filter('_type == "parkingFacility" && property._ref == $propertyId')
-            .params({ propertyId })
-            .child((parkingId) =>
-              S.list()
-                .title('Parkanlage')
-                .items([
-                  S.listItem()
-                    .title('Parkanlage bearbeiten')
-                    .icon(Pencil)
-                    .child(editNode(S, parkingId, 'parkingFacility')),
-
-                  S.listItem()
-                    .title('Assets in Parkanlage')
-                    .icon(Package)
-                    .child(
-                      S.documentTypeList('asset')
-                        .title('Assets in Parkanlage')
-                        .filter('_type == "asset" && location._ref == $parkingId')
-                        .params({ parkingId })
-                    ),
-                ])
-            )
-        ),
-
-      S.listItem()
-        .title('Direkte Assets (Areal)')
-        .icon(Package)
-        .child(
-          S.documentTypeList('asset')
-            .title('Direkte Assets')
-            .filter('_type == "asset" && location._ref == $propertyId')
-            .params({ propertyId })
-        ),
-    ])
-}
-
-// ── Level 1: Tenant ──────────────────────────────────────
-
-function tenantView(S: SB, tenantId: string) {
-  return S.list()
-    .title('Mandant')
-    .items([
-      S.listItem()
-        .title('Mandant bearbeiten')
-        .icon(Pencil)
-        .child(editNode(S, tenantId, 'tenant')),
-
-      S.listItem()
-        .title('Liegenschaften')
-        .icon(Building2)
-        .child(
-          S.documentTypeList('property')
-            .title('Liegenschaften')
-            .filter('_type == "property" && tenant._ref == $tenantId')
-            .params({ tenantId })
-            .child((propertyId) => propertyView(S, propertyId))
-        ),
-
-      S.listItem()
-        .title('Dienstleister')
-        .icon(Briefcase)
-        .child(
-          S.documentTypeList('provider')
-            .title('Dienstleister')
-            .filter('_type == "provider" && tenant._ref == $tenantId')
-            .params({ tenantId })
-            .initialValueTemplates([
-              S.initialValueTemplateItem('provider-by-tenant', { tenantId }),
-            ])
-        ),
-
-      S.listItem()
-        .title('Benutzer')
-        .icon(Users)
-        .child(
-          S.documentTypeList('user')
-            .title('Benutzer')
-            .filter('_type == "user" && tenant._ref == $tenantId')
-            .params({ tenantId })
-            .initialValueTemplates([
-              S.initialValueTemplateItem('user-by-tenant', { tenantId }),
-            ])
-        ),
-    ])
-}
-
-// ── Root Structure ───────────────────────────────────────
-
-export const structure: StructureResolver = (S) =>
-  S.list()
-    .title('RUTA // TECH')
-    .items([
-      // ── Hierarchical Explorer ────────────────────────
-      S.listItem()
-        .title('Explorer')
-        .icon(FolderTree)
-        .child(
-          S.documentTypeList('tenant')
-            .title('Mandanten')
-            .child((tenantId) => tenantView(S, tenantId))
-        ),
-
-      // ── Global Data / Admin ──────────────────────────
-      S.divider(),
-
-      S.listItem()
-        .title('Dienstleister')
-        .icon(Briefcase)
-        .child(S.documentTypeList('provider').title('Dienstleister')),
-
-      S.listItem()
-        .title('Benutzer')
-        .icon(Users)
-        .child(S.documentTypeList('user').title('Benutzer')),
-
-      S.divider(),
-
-      S.listItem()
-        .title('Tickets')
-        .icon(Ticket)
-        .child(S.documentTypeList('ticket').title('Tickets')),
-
-      S.listItem()
-        .title('Serviceheft')
-        .icon(BookOpen)
-        .child(S.documentTypeList('logbookEntry').title('Serviceheft')),
-
-      S.divider(),
-
-      S.listItem()
-        .title('Anlagen & Inventar')
-        .icon(Package)
-        .child(S.documentTypeList('asset').title('Anlagen & Inventar')),
-
-      // ── Remaining auto-generated types ───────────────
-      S.divider(),
-      ...S.documentTypeListItems().filter(
-        (item) => !LISTED_TYPES.includes(item.getId() ?? '')
-      ),
-    ])
-
-// ── Default Document Node (applies to flat admin lists) ──
-
+// --- 1. SPLIT VIEW CONFIGURATION (Form + QR Code + Service-Historie) ---
+// Applied automatically when documents are opened from S.documentTypeList / S.documentList
+// WITHOUT a custom .child() returning S.document().
 export const defaultDocumentNode: DefaultDocumentNodeResolver = (
   S,
-  { schemaType }
+  {schemaType}
 ) => {
-  if (schemaType === 'tenant') {
-    return S.document().views([
-      S.view.form(),
-      S.view.component(MassImport).title('Mass Import').icon(Upload),
-    ])
-  }
-  if (schemaType === 'asset') {
-    return S.document().views([
-      S.view.form(),
-      S.view.component(QRGenerator).title('QR Code').icon(QrCode),
-    ])
-  }
-  if (QR_INVENTORY_TYPES.includes(schemaType)) {
-    return S.document().views([
-      S.view.form(),
-      S.view.component(QRGenerator).title('QR Export').icon(QrCode),
-    ])
-  }
-  return S.document()
+  return S.document().views(getDocumentViews(S, schemaType))
 }
+
+// --- 2. MAIN MENU STRUCTURE ---
+export const structure: StructureResolver = (S) =>
+  S.list()
+    .id('root')
+    .title('ImmoAdmin')
+    .items([
+      // === A. SERVICE CENTER (Workflow) ===
+      S.listItem()
+        .title('Service-Center')
+        .icon(ClipboardList)
+        .id('service-center')
+        .child(
+          S.list()
+            .id('service-center-menu')
+            .title('Auftrags-Status')
+            .items([
+              S.listItem()
+                .title('Offen')
+                .icon(AlertCircle)
+                .id('logbook-open')
+                .child(
+                  S.documentList()
+                    .id('logbook-open-list')
+                    .title('Offene Auftraege')
+                    .filter('_type == "logbookEntry" && status == "open"')
+                ),
+              S.listItem()
+                .title('In Arbeit')
+                .icon(Clock)
+                .id('logbook-in-progress')
+                .child(
+                  S.documentList()
+                    .id('logbook-in-progress-list')
+                    .title('In Arbeit')
+                    .filter(
+                      '_type == "logbookEntry" && status == "in_progress"'
+                    )
+                ),
+              S.listItem()
+                .title('Erledigt')
+                .icon(CheckCircle2)
+                .id('logbook-done')
+                .child(
+                  S.documentList()
+                    .id('logbook-done-list')
+                    .title('Erledigte Auftraege')
+                    .filter('_type == "logbookEntry" && status == "done"')
+                ),
+              S.divider(),
+              S.listItem()
+                .title('Alle Tickets')
+                .icon(FileText)
+                .id('all-tickets')
+                .child(S.documentTypeList('ticket').id('all-tickets-list')),
+              S.listItem()
+                .title('Alle Eintraege')
+                .icon(BookOpen)
+                .id('all-logbook')
+                .child(S.documentTypeList('logbookEntry').id('all-logbook-list')),
+              S.divider(),
+              S.listItem()
+                .title('Wartung & Intervalle')
+                .icon(CalendarClock)
+                .id('maintenance')
+                .child(
+                  S.documentTypeList('maintenancePlan')
+                    .id('maintenance-list')
+                    .title('Wartungsplaene')
+                    .defaultOrdering([{field: 'nextDueDate', direction: 'asc'}])
+                ),
+              S.listItem()
+                .title('Zaehlerstande')
+                .icon(Gauge)
+                .id('meter-readings')
+                .child(
+                  S.documentTypeList('meterReading')
+                    .id('meter-readings-list')
+                    .title('Zaehlerstande')
+                    .defaultOrdering([{field: 'date', direction: 'desc'}])
+                ),
+            ])
+        ),
+
+      S.divider(),
+
+      // === B. EXPLORER (The Drill-Down Tree) ===
+      S.listItem()
+        .title('Explorer')
+        .icon(LayoutDashboard)
+        .id('explorer')
+        .child(
+          S.documentTypeList('tenant')
+            .id('tenants-list')
+            .title('Mandanten')
+            .schemaType('tenant')
+            .child((tenantId) =>
+              S.list()
+                .id(`tenant-menu-${tenantId}`)
+                .title('Mandant Details')
+                .items([
+                  // 1. Edit Tenant
+                  S.listItem()
+                    .title('Mandant bearbeiten')
+                    .icon(Users)
+                    .id(`edit-tenant-${tenantId}`)
+                    .child(
+                      S.document()
+                        .schemaType('tenant')
+                        .documentId(tenantId)
+                    ),
+
+                  // 2. Properties (Drill-down start)
+                  S.listItem()
+                    .title('Liegenschaften')
+                    .icon(Home)
+                    .id(`properties-item-${tenantId}`)
+                    .child(
+                      S.documentList()
+                        .id(`properties-${tenantId}`)
+                        .title('Liegenschaften')
+                        .schemaType('property')
+                        .filter(
+                          '_type == "property" && tenant._ref == $tenantId'
+                        )
+                        .params({tenantId})
+                        .child((propertyId) =>
+                          S.list()
+                            .id(`property-menu-${propertyId}`)
+                            .title('Objekt-Struktur')
+                            .items([
+                              S.listItem()
+                                .title('Liegenschaft bearbeiten')
+                                .icon(Home)
+                                .id(`edit-property-${propertyId}`)
+                                .child(
+                                  S.document()
+                                    .schemaType('property')
+                                    .documentId(propertyId)
+                                    .views(getDocumentViews(S, 'property'))
+                                ),
+
+                              // Buildings
+                              S.listItem()
+                                .title('Gebaeude')
+                                .icon(Building2)
+                                .id(`buildings-item-${propertyId}`)
+                                .child(
+                                  S.documentList()
+                                    .id(`buildings-${propertyId}`)
+                                    .title('Gebaeude')
+                                    .schemaType('building')
+                                    .filter(
+                                      '_type == "building" && property._ref == $propertyId'
+                                    )
+                                    .params({propertyId})
+                                    .initialValueTemplates([
+                                      S.initialValueTemplateItem('building-by-property', {
+                                        propertyId,
+                                        tenantId,
+                                      }),
+                                    ])
+                                    .child((buildingId) =>
+                                      S.list()
+                                        .id(`building-menu-${buildingId}`)
+                                        .title('Gebaeude-Struktur')
+                                        .items([
+                                          S.listItem()
+                                            .title('Gebaeude bearbeiten')
+                                            .icon(Building2)
+                                            .id(`edit-building-${buildingId}`)
+                                            .child(
+                                              S.document()
+                                                .schemaType('building')
+                                                .documentId(buildingId)
+                                                .views(getDocumentViews(S, 'building'))
+                                            ),
+
+                                          // Floors
+                                          S.listItem()
+                                            .title('Stockwerke')
+                                            .icon(Layers)
+                                            .id(`floors-item-${buildingId}`)
+                                            .child(
+                                              S.documentList()
+                                                .id(`floors-${buildingId}`)
+                                                .title('Stockwerke')
+                                                .schemaType('floor')
+                                                .filter(
+                                                  '_type == "floor" && building._ref == $buildingId'
+                                                )
+                                                .params({buildingId})
+                                                .initialValueTemplates([
+                                                  S.initialValueTemplateItem('floor-by-building', {
+                                                    buildingId,
+                                                    tenantId,
+                                                  }),
+                                                ])
+                                                .child((floorId) =>
+                                                  S.list()
+                                                    .id(`floor-menu-${floorId}`)
+                                                    .title('Stockwerk')
+                                                    .items([
+                                                      S.listItem()
+                                                        .title(
+                                                          'Stockwerk bearbeiten'
+                                                        )
+                                                        .icon(Layers)
+                                                        .id(`edit-floor-${floorId}`)
+                                                        .child(
+                                                          S.document()
+                                                            .schemaType('floor')
+                                                            .documentId(floorId)
+                                                            .views(getDocumentViews(S, 'floor'))
+                                                        ),
+                                                      S.listItem()
+                                                        .title('Einheiten')
+                                                        .icon(DoorOpen)
+                                                        .id(`units-item-${floorId}`)
+                                                        .child(
+                                                          S.documentList()
+                                                            .id(`units-${floorId}`)
+                                                            .title('Einheiten')
+                                                            .schemaType('unit')
+                                                            .filter(
+                                                              '_type == "unit" && floor._ref == $floorId'
+                                                            )
+                                                            .params({floorId})
+                                                            .initialValueTemplates([
+                                                              S.initialValueTemplateItem('unit-by-floor', {
+                                                                floorId,
+                                                                buildingId,
+                                                                tenantId,
+                                                              }),
+                                                            ])
+                                                            .child((unitId) =>
+                                                              S.list()
+                                                                .id(`unit-menu-${unitId}`)
+                                                                .title('Einheit Details')
+                                                                .items([
+                                                                  S.listItem()
+                                                                    .title('Einheit bearbeiten')
+                                                                    .icon(DoorOpen)
+                                                                    .id(`edit-unit-${unitId}`)
+                                                                    .child(
+                                                                      S.document()
+                                                                        .schemaType('unit')
+                                                                        .documentId(unitId)
+                                                                        .views(getDocumentViews(S, 'unit'))
+                                                                    ),
+                                                                  S.listItem()
+                                                                    .title('Assets (Wohnung)')
+                                                                    .icon(Box)
+                                                                    .id(`assets-unit-item-${unitId}`)
+                                                                    .child(
+                                                                      S.documentList()
+                                                                        .id(`assets-unit-${unitId}`)
+                                                                        .title('Assets')
+                                                                        .schemaType('asset')
+                                                                        .filter(
+                                                                          '_type == "asset" && location._ref == $unitId'
+                                                                        )
+                                                                        .params({unitId})
+                                                                        .initialValueTemplates([
+                                                                          S.initialValueTemplateItem('asset-by-unit', {
+                                                                            unitId,
+                                                                            tenantId,
+                                                                          }),
+                                                                        ])
+                                                                    ),
+                                                                  S.listItem()
+                                                                    .title('Tickets (Wohnung)')
+                                                                    .icon(FileText)
+                                                                    .id(`tickets-unit-item-${unitId}`)
+                                                                    .child(
+                                                                      S.documentList()
+                                                                        .id(`tickets-unit-${unitId}`)
+                                                                        .title('Tickets')
+                                                                        .schemaType('ticket')
+                                                                        .filter(
+                                                                          '_type == "ticket" && scope._ref == $unitId'
+                                                                        )
+                                                                        .params({unitId})
+                                                                    ),
+                                                                ])
+                                                            )
+                                                        ),
+                                                      S.listItem()
+                                                        .title(
+                                                          'Assets (Etage)'
+                                                        )
+                                                        .icon(Box)
+                                                        .id(`assets-floor-item-${floorId}`)
+                                                        .child(
+                                                          S.documentList()
+                                                            .id(`assets-floor-${floorId}`)
+                                                            .title(
+                                                              'Assets (Etage)'
+                                                            )
+                                                            .schemaType('asset')
+                                                            .filter(
+                                                              '_type == "asset" && location._ref == $floorId'
+                                                            )
+                                                            .params({floorId})
+                                                        ),
+                                                    ])
+                                                )
+                                            ),
+
+                                          // Assets at building level
+                                          S.listItem()
+                                            .title('Assets (Gebaeude)')
+                                            .icon(Box)
+                                            .id(`assets-building-item-${buildingId}`)
+                                            .child(
+                                              S.documentList()
+                                                .id(`assets-building-${buildingId}`)
+                                                .title('Assets (Gebaeude)')
+                                                .schemaType('asset')
+                                                .filter(
+                                                  '_type == "asset" && location._ref == $buildingId'
+                                                )
+                                                .params({buildingId})
+                                            ),
+                                        ])
+                                    )
+                                ),
+
+                              // Parking Facilities (Drill-down)
+                              S.listItem()
+                                .title('Parkanlagen')
+                                .icon(Car)
+                                .id(`parking-item-${propertyId}`)
+                                .child(
+                                  S.documentList()
+                                    .id(`parking-${propertyId}`)
+                                    .title('Parkanlagen')
+                                    .schemaType('parkingFacility')
+                                    .filter(
+                                      '_type == "parkingFacility" && property._ref == $propertyId'
+                                    )
+                                    .params({propertyId})
+                                    .child((facilityId) =>
+                                      S.list()
+                                        .id(`facility-menu-${facilityId}`)
+                                        .title('Verwaltung Parkanlage')
+                                        .items([
+                                          S.listItem()
+                                            .title('Anlage bearbeiten')
+                                            .icon(Car)
+                                            .id(`edit-facility-${facilityId}`)
+                                            .child(
+                                              S.document()
+                                                .schemaType('parkingFacility')
+                                                .documentId(facilityId)
+                                                .views(getDocumentViews(S, 'parkingFacility'))
+                                            ),
+                                          S.listItem()
+                                            .title('Parkplaetze')
+                                            .icon(CircleParking)
+                                            .id(`spots-item-${facilityId}`)
+                                            .child(
+                                              S.documentList()
+                                                .id(`spots-${facilityId}`)
+                                                .title('Parkplaetze')
+                                                .schemaType('parkingSpot')
+                                                .filter(
+                                                  '_type == "parkingSpot" && facility._ref == $facilityId'
+                                                )
+                                                .params({facilityId})
+                                                .initialValueTemplates([
+                                                  S.initialValueTemplateItem('spot-by-facility', {
+                                                    facilityId,
+                                                  }),
+                                                ])
+                                                .defaultOrdering([
+                                                  {field: 'number', direction: 'asc'},
+                                                ])
+                                            ),
+                                          S.listItem()
+                                            .title('Tickets')
+                                            .icon(AlertCircle)
+                                            .id(`tickets-facility-item-${facilityId}`)
+                                            .child(
+                                              S.documentList()
+                                                .id(`tickets-facility-${facilityId}`)
+                                                .title('Tickets')
+                                                .schemaType('ticket')
+                                                .filter(
+                                                  '_type == "ticket" && scope._ref == $facilityId'
+                                                )
+                                                .params({facilityId})
+                                            ),
+                                        ])
+                                    )
+                                ),
+
+                              // Outdoor Areas
+                              S.listItem()
+                                .title('Aussenanlagen')
+                                .icon(Trees)
+                                .id(`outdoor-item-${propertyId}`)
+                                .child(
+                                  S.documentList()
+                                    .id(`outdoor-${propertyId}`)
+                                    .title('Aussenanlagen')
+                                    .schemaType('outdoorArea')
+                                    .filter(
+                                      '_type == "outdoorArea" && property._ref == $propertyId'
+                                    )
+                                    .params({propertyId})
+                                    .child((outdoorAreaId) =>
+                                      S.list()
+                                        .id(`outdoor-menu-${outdoorAreaId}`)
+                                        .title('Bereich')
+                                        .items([
+                                          S.listItem()
+                                            .title('Bearbeiten')
+                                            .icon(Trees)
+                                            .id(`edit-outdoor-${outdoorAreaId}`)
+                                            .child(
+                                              S.document()
+                                                .schemaType('outdoorArea')
+                                                .documentId(outdoorAreaId)
+                                                .views(getDocumentViews(S, 'outdoorArea'))
+                                            ),
+                                          S.listItem()
+                                            .title('Assets (In diesem Bereich)')
+                                            .icon(Box)
+                                            .id(`assets-outdoor-item-${outdoorAreaId}`)
+                                            .child(
+                                              S.documentList()
+                                                .id(`assets-outdoor-${outdoorAreaId}`)
+                                                .title('Assets')
+                                                .schemaType('asset')
+                                                .filter(
+                                                  '_type == "asset" && location._ref == $outdoorAreaId'
+                                                )
+                                                .params({outdoorAreaId})
+                                                .initialValueTemplates([
+                                                  S.initialValueTemplateItem('asset-by-outdoor', {
+                                                    outdoorId: outdoorAreaId,
+                                                    tenantId,
+                                                  }),
+                                                ])
+                                            ),
+                                          S.listItem()
+                                            .title('Tickets')
+                                            .icon(FileText)
+                                            .id(`tickets-outdoor-item-${outdoorAreaId}`)
+                                            .child(
+                                              S.documentList()
+                                                .id(`tickets-outdoor-${outdoorAreaId}`)
+                                                .title('Tickets')
+                                                .schemaType('ticket')
+                                                .filter(
+                                                  '_type == "ticket" && scope._ref == $outdoorAreaId'
+                                                )
+                                                .params({outdoorAreaId})
+                                            ),
+                                        ])
+                                    )
+                                ),
+
+                              // Assets at property level
+                              S.listItem()
+                                .title('Assets (Areal)')
+                                .icon(Box)
+                                .id(`assets-property-item-${propertyId}`)
+                                .child(
+                                  S.documentList()
+                                    .id(`assets-property-${propertyId}`)
+                                    .title('Assets (Areal)')
+                                    .schemaType('asset')
+                                    .filter(
+                                      '_type == "asset" && location._ref == $propertyId'
+                                    )
+                                    .params({propertyId})
+                                ),
+                            ])
+                        )
+                    ),
+
+                  S.divider(),
+
+                  S.listItem()
+                    .title('Dienstleister')
+                    .icon(Users)
+                    .id(`providers-${tenantId}`)
+                    .child(S.documentTypeList('provider').id(`providers-list-${tenantId}`)),
+                  S.listItem()
+                    .title('Benutzer')
+                    .icon(Users)
+                    .id(`users-${tenantId}`)
+                    .child(S.documentTypeList('user').id(`users-list-${tenantId}`)),
+                ])
+            )
+        ),
+
+      S.divider(),
+
+      // === C. FLAT LISTS (Fallback) ===
+      S.documentTypeListItem('ticket').title('Tickets'),
+      S.documentTypeListItem('asset').title('Assets'),
+      S.documentTypeListItem('provider').title('Dienstleister'),
+
+      // Catch-all for other types not listed above
+      ...S.documentTypeListItems().filter(
+        (listItem) =>
+          ![
+            'logbookEntry',
+            'ticket',
+            'property',
+            'building',
+            'floor',
+            'unit',
+            'parkingFacility',
+            'parkingSpot',
+            'outdoorArea',
+            'maintenancePlan',
+            'meterReading',
+            'asset',
+            'tenant',
+            'provider',
+            'user',
+            'media.tag',
+          ].includes(listItem.getId() || '')
+      ),
+    ])

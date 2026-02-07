@@ -357,3 +357,39 @@ export const assetPageQuery = groq`
 export async function getAssetPageData(slug: string) {
   return await client.fetch(assetPageQuery, { slug })
 }
+
+// ── 3. PAL ENGINE QUERY (CAPEX Radar Dashboard) ──────────
+//
+// Fetches all assets with lifecycle data and dynamically counts
+// repair and maintenance events from the logbook for scoring.
+
+export const palAssetsQuery = groq`
+  *[_type == "asset" && defined(installDate)] {
+    _id,
+    name,
+    category,
+    image,
+    installDate,
+    expectedLifespan,
+    initialCost,
+    replacementCost,
+    manualCondition,
+
+    // Dynamic counts from Logbook
+    "repairCount": count(
+      *[_type == "logbookEntry" && references(^._id) && type == "repair"]
+    ),
+    "maintenanceCount": count(
+      *[_type == "logbookEntry" && references(^._id) && type == "maintenance"]
+    ),
+
+    // Context info
+    "locationName": location->name,
+    "tenantName": tenant->name
+  }
+`
+
+// Helper to fetch PAL data
+export async function getPalAssets() {
+  return await client.fetch(palAssetsQuery)
+}

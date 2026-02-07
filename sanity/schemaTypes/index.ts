@@ -12,6 +12,9 @@ import { asset } from './asset'
 import { ticket } from './ticket'
 import { logbookEntry } from './logbookEntry'
 import { user } from './user'
+import { outdoorArea } from './outdoorArea'
+import { maintenancePlan } from './maintenancePlan'
+import { meterReading } from './meterReading'
 
 export const schemaTypes = [
   // Core config
@@ -24,14 +27,17 @@ export const schemaTypes = [
   floor,
   unit,
 
-  // Parking
+  // Parking & Outdoor
   parkingFacility,
   parkingSpot,
+  outdoorArea,
 
   // Assets & Operations
   asset,
   ticket,
   logbookEntry,
+  maintenancePlan,
+  meterReading,
 
   // Service partners
   provider,
