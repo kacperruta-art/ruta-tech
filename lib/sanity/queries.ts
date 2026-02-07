@@ -223,7 +223,15 @@ export const deepContextQuery = groq`
       _type == "parkingFacility"
         => connectedBuildings[0]->${BUILDING_FULL_PROJECTION},
       _type == "property"
-        => null,
+        => {
+          _id,
+          name,
+          "pin": null,
+          "address": null,
+          "tenantSlug": tenant->slug.current,
+          "tenant": tenant->${TENANT_PROJECTION},
+          "property": { _id, name, "slug": slug.current }
+        },
 
       // Asset: polymorphic location climb
       _type == "asset" => select(
@@ -235,6 +243,16 @@ export const deepContextQuery = groq`
           => location->${BUILDING_FULL_PROJECTION},
         location->_type == "parkingFacility"
           => location->connectedBuildings[0]->${BUILDING_FULL_PROJECTION},
+        location->_type == "property"
+          => {
+            "_id": location->_id,
+            "name": location->name,
+            "pin": null,
+            "address": null,
+            "tenantSlug": location->tenant->slug.current,
+            "tenant": location->tenant->${TENANT_PROJECTION},
+            "property": { "_id": location->_id, "name": location->name, "slug": location->slug.current }
+          },
         null
       ),
 
@@ -321,11 +339,13 @@ export const assetPageQuery = groq`
       _type == "floor"   => building->{ _id, name, "pin": chatAccessPin, "tenantSlug": tenant->slug.current },
       _type == "building" => { _id, name, "pin": chatAccessPin, "tenantSlug": tenant->slug.current },
       _type == "parkingFacility" => connectedBuildings[0]->{ _id, name, "pin": chatAccessPin, "tenantSlug": tenant->slug.current },
+      _type == "property" => { _id, name, "pin": null, "tenantSlug": tenant->slug.current },
       _type == "asset" => select(
         location->_type == "unit"    => location->building->{ _id, name, "pin": chatAccessPin, "tenantSlug": tenant->slug.current },
         location->_type == "floor"   => location->building->{ _id, name, "pin": chatAccessPin, "tenantSlug": tenant->slug.current },
         location->_type == "building" => location->{ _id, name, "pin": chatAccessPin, "tenantSlug": tenant->slug.current },
         location->_type == "parkingFacility" => location->connectedBuildings[0]->{ _id, name, "pin": chatAccessPin, "tenantSlug": tenant->slug.current },
+        location->_type == "property" => { "_id": location->_id, "name": location->name, "pin": null, "tenantSlug": location->tenant->slug.current },
         null
       ),
       null
