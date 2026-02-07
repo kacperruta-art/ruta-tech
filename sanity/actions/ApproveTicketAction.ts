@@ -16,7 +16,7 @@ export function ApproveTicketAction(props: any) {
   return {
     label: isProcessing ? 'Wird freigegeben...' : 'Freigeben & Beauftragen',
     icon: Rocket,
-    tone: 'positive',
+    tone: 'positive' as const,
 
     onHandle: async () => {
       setIsProcessing(true)

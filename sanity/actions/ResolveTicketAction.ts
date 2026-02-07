@@ -24,7 +24,7 @@ export function ResolveTicketAction(props: any) {
     disabled: isPublishing || isAlreadyDone,
     label: isPublishing ? 'Wird verarbeitet...' : 'Abschliessen & Archivieren',
     icon: CheckCircle2,
-    tone: 'positive',
+    tone: 'positive' as const,
 
     onHandle: async () => {
       setIsPublishing(true)
