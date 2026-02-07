@@ -211,7 +211,7 @@ Antworte auf Deutsch (Schweizer Hochdeutsch).`
           ...(userId
             ? { reportedByUser: { _type: 'reference', _ref: userId } }
             : { reportedByName: userName || 'Gast' }),
-        })
+        } as any)
 
         console.log('[createTicket] Created:', doc._id)
         const shortId = doc._id.slice(0, 8).toUpperCase()
