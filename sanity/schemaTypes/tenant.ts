@@ -461,4 +461,11 @@ export const tenant = defineType({
       }
     },
   },
+
+  // Ensure reference search can find tenants by name, legalName, or slug
+  __experimental_search: [
+    {path: 'name', weight: 10},
+    {path: 'legalName', weight: 5},
+    {path: 'slug.current', weight: 3},
+  ],
 })

@@ -60,14 +60,20 @@ export const maintenancePlan = defineType({
       options: {
         list: [
           {title: 'Monatlich', value: 'monthly'},
-          {title: 'Quartalsweise', value: 'quarterly'},
+          {title: 'Vierteljaehrlich', value: 'quarterly'},
           {title: 'Halbjaehrlich', value: 'biannual'},
-          {title: 'Jaehrlich', value: 'yearly'},
+          {title: 'Jaehrlich', value: 'annual'},
           {title: 'Alle 2 Jahre', value: 'biennial'},
-          {title: 'Manuell / Nach Bedarf', value: 'manual'},
         ],
       },
       validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'startDate',
+      title: 'Startdatum',
+      type: 'date',
+      group: 'schedule',
+      description: 'Wann beginnt der Zyklus?',
     }),
     defineField({
       name: 'nextDueDate',
@@ -77,12 +83,27 @@ export const maintenancePlan = defineType({
       validation: (rule) => rule.required(),
     }),
     defineField({
+      name: 'lastExecutionDate',
+      title: 'Letzte Ausfuehrung',
+      type: 'date',
+      group: 'schedule',
+      description: 'Datum der letzten durchgefuehrten Wartung.',
+    }),
+    defineField({
       name: 'assignedProvider',
       title: 'Zustaendiger Dienstleister',
       type: 'reference',
       group: 'schedule',
       to: [{type: 'provider'}],
       description: 'Wer fuehrt die Wartung durch?',
+    }),
+    defineField({
+      name: 'description',
+      title: 'Beschreibung / Instruktionen',
+      type: 'text',
+      group: 'schedule',
+      rows: 3,
+      description: 'Hinweise fuer den Dienstleister oder interne Notizen.',
     }),
 
     // --- 3. TASKS ---
@@ -127,25 +148,28 @@ export const maintenancePlan = defineType({
       title: 'title',
       nextDate: 'nextDueDate',
       freq: 'frequency',
-      scope: 'scope.name',
+      isActive: 'isActive',
     },
-    prepare({title, nextDate, freq, scope}) {
+    prepare({title, nextDate, freq, isActive}) {
       const freqMap: Record<string, string> = {
         monthly: 'Monatlich',
-        quarterly: 'Quartal',
-        biannual: 'Halbjahr',
-        yearly: 'Jaehrlich',
-        biennial: '2-Jahre',
-        manual: 'Manuell',
+        quarterly: 'Vierteljaehrlich',
+        biannual: 'Halbjaehrlich',
+        annual: 'Jaehrlich',
+        biennial: 'Alle 2 Jahre',
       }
 
       const dateStr = nextDate
         ? new Date(nextDate).toLocaleDateString('de-CH')
         : 'Kein Termin'
 
+      const freqLabel = freqMap[freq] || freq || '?'
+      const activePrefix = isActive === false ? '[INAKTIV] ' : ''
+
       return {
-        title: title,
-        subtitle: `${dateStr} (${freqMap[freq] || freq}) · ${scope || ''}`,
+        title: `${activePrefix}${title || 'Ohne Titel'}`,
+        subtitle: `${freqLabel} | Naechster: ${dateStr}`,
+        media: CalendarClock,
       }
     },
   },

@@ -37,7 +37,6 @@ export const ticket = defineType({
       type: 'reference',
       to: [{ type: 'tenant' }],
       validation: (rule) => rule.required(),
-      readOnly: true, // Zazwyczaj ustawiane automatycznie przez system
     }),
 
     // 2. PROBLEM (Co się stało?)
@@ -138,14 +137,21 @@ export const ticket = defineType({
       title: 'Freigegeben am',
       type: 'datetime',
       group: 'workflow',
-      readOnly: true,
     }),
     defineField({
       name: 'approvedBy',
-      title: 'Freigegeben von',
+      title: 'Freigegeben von (User)',
       type: 'reference',
       group: 'workflow',
       to: [{ type: 'user' }],
+      description: 'Optional: Verknüpfung mit einem Benutzerkonto.',
+    }),
+    defineField({
+      name: 'approvedByName',
+      title: 'Freigegeben von (Name)',
+      type: 'string',
+      group: 'workflow',
+      description: 'Wird automatisch beim Freigeben gesetzt.',
       readOnly: true,
     }),
 

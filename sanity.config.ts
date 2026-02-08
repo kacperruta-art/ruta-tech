@@ -7,9 +7,12 @@
 import {visionTool} from '@sanity/vision'
 import {defineConfig} from 'sanity'
 import {structureTool} from 'sanity/structure'
+import {dashboardTool} from '@sanity/dashboard'
+import {documentListWidget} from 'sanity-plugin-dashboard-widget-document-list'
 import {apiVersion, dataset, projectId} from './sanity/env'
 import {schema} from './sanity/schemaTypes'
 import {structure, defaultDocumentNode} from './sanity/deskStructure'
+import {contextTemplates} from './sanity/templates'
 import {ResolveTicketAction} from './sanity/actions/ResolveTicketAction'
 import {ApproveTicketAction} from './sanity/actions/ApproveTicketAction'
 import React from 'react'
@@ -45,125 +48,21 @@ export default defineConfig({
   schema: {
     ...schema,
     templates: (prev) => {
-      // Filter out any broken/duplicate default 'tenant' template
+      // Remove duplicate default 'tenant' template
       const filtered = prev.filter((t) => t.id !== 'tenant')
 
       return [
         ...filtered,
-
-        // ── FORCE: Tenant template for intent URL resolution ──
+        // Tenant template for intent URL resolution
         {
           id: 'tenant',
           title: 'Neuer Mandant',
           schemaType: 'tenant',
           value: () => ({}),
         },
-
-        // Existing tenant-scoped templates
-        {
-          id: 'provider-by-tenant',
-        title: 'Dienstleister (Mandant)',
-        schemaType: 'provider',
-        parameters: [{name: 'tenantId', type: 'string'}],
-        value: ({tenantId}: {tenantId: string}) => ({
-          tenant: {_type: 'reference', _ref: tenantId},
-        }),
-      },
-      {
-        id: 'user-by-tenant',
-        title: 'Benutzer (Mandant)',
-        schemaType: 'user',
-        parameters: [{name: 'tenantId', type: 'string'}],
-        value: ({tenantId}: {tenantId: string}) => ({
-          tenant: {_type: 'reference', _ref: tenantId},
-        }),
-      },
-
-      // ── Context Injection Templates ────────────────────────
-
-      // 1. Property -> Building
-      {
-        id: 'building-by-property',
-        title: 'Gebaeude in Liegenschaft',
-        schemaType: 'building',
-        parameters: [
-          {name: 'propertyId', type: 'string'},
-          {name: 'tenantId', type: 'string'},
-        ],
-        value: ({propertyId, tenantId}: {propertyId: string; tenantId: string}) => ({
-          property: {_type: 'reference', _ref: propertyId},
-          tenant: {_type: 'reference', _ref: tenantId},
-        }),
-      },
-      // 2. Building -> Floor
-      {
-        id: 'floor-by-building',
-        title: 'Stockwerk in Gebaeude',
-        schemaType: 'floor',
-        parameters: [
-          {name: 'buildingId', type: 'string'},
-          {name: 'tenantId', type: 'string'},
-        ],
-        value: ({buildingId, tenantId}: {buildingId: string; tenantId: string}) => ({
-          building: {_type: 'reference', _ref: buildingId},
-          tenant: {_type: 'reference', _ref: tenantId},
-        }),
-      },
-      // 3. Floor -> Unit (auto-fills Building too)
-      {
-        id: 'unit-by-floor',
-        title: 'Einheit auf Stockwerk',
-        schemaType: 'unit',
-        parameters: [
-          {name: 'floorId', type: 'string'},
-          {name: 'buildingId', type: 'string'},
-          {name: 'tenantId', type: 'string'},
-        ],
-        value: ({floorId, buildingId, tenantId}: {floorId: string; buildingId: string; tenantId: string}) => ({
-          floor: {_type: 'reference', _ref: floorId},
-          building: {_type: 'reference', _ref: buildingId},
-          tenant: {_type: 'reference', _ref: tenantId},
-        }),
-      },
-      // 4. Unit -> Asset (location: Unit)
-      {
-        id: 'asset-by-unit',
-        title: 'Asset in Einheit',
-        schemaType: 'asset',
-        parameters: [
-          {name: 'unitId', type: 'string'},
-          {name: 'tenantId', type: 'string'},
-        ],
-        value: ({unitId, tenantId}: {unitId: string; tenantId: string}) => ({
-          location: {_type: 'reference', _ref: unitId},
-          tenant: {_type: 'reference', _ref: tenantId},
-        }),
-      },
-      // 5. Parking Facility -> Spot
-      {
-        id: 'spot-by-facility',
-        title: 'Parkplatz in Anlage',
-        schemaType: 'parkingSpot',
-        parameters: [{name: 'facilityId', type: 'string'}],
-        value: ({facilityId}: {facilityId: string}) => ({
-          facility: {_type: 'reference', _ref: facilityId},
-        }),
-      },
-      // 6. Outdoor -> Asset
-      {
-        id: 'asset-by-outdoor',
-        title: 'Asset in Aussenanlage',
-        schemaType: 'asset',
-        parameters: [
-          {name: 'outdoorId', type: 'string'},
-          {name: 'tenantId', type: 'string'},
-        ],
-        value: ({outdoorId, tenantId}: {outdoorId: string; tenantId: string}) => ({
-          location: {_type: 'reference', _ref: outdoorId},
-          tenant: {_type: 'reference', _ref: tenantId},
-        }),
-      },
-    ]
+        // All context-injection templates (from sanity/templates.ts)
+        ...contextTemplates,
+      ]
     },
   },
 
@@ -177,6 +76,28 @@ export default defineConfig({
   },
 
   plugins: [
+    dashboardTool({
+      widgets: [
+        documentListWidget({
+          title: 'PILNE INTERWENCJE',
+          query: `*[_type == "ticket" && priority in ["emergency", "high"] && status in ["open", "in_progress", "pending_approval"]] | order(_createdAt desc)`,
+          limit: 10,
+          layout: {width: 'full'},
+        }),
+        documentListWidget({
+          title: 'WYMIANA SPRZETU (CAPEX)',
+          query: `*[_type == "asset" && condition in ["poor", "defect", "critical"]] | order(_createdAt desc)`,
+          limit: 10,
+          layout: {width: 'half'},
+        }),
+        documentListWidget({
+          title: 'OSTATNIE ZGLOSZENIA',
+          query: `*[_type == "ticket"] | order(_createdAt desc)`,
+          limit: 5,
+          layout: {width: 'half'},
+        }),
+      ],
+    }),
     structureTool({ structure, defaultDocumentNode }),
     visionTool({ defaultApiVersion: apiVersion }),
   ],

@@ -21,9 +21,11 @@ import {
   CalendarClock,
   CircleParking,
   Gauge,
+  Activity,
 } from 'lucide-react'
 import {QRGenerator} from './components/QRGenerator'
 import {ServiceHistoryView} from './components/ServiceHistoryView'
+import {HealthBar} from './components/HealthBar'
 
 // Schema types that get the "Service-Historie" tab
 const TYPES_WITH_HISTORY = [
@@ -48,6 +50,13 @@ const LEAF_QR_TYPES = ['asset', 'parkingSpot']
 // Used by BOTH defaultDocumentNode AND explicit S.document() nodes in the tree.
 function getDocumentViews(S: any, schemaType: string) {
   const views = [S.view.form().title('Bearbeiten')]
+
+  // Asset-specific: Health & PAL tab
+  if (schemaType === 'asset') {
+    views.push(
+      S.view.component(HealthBar).title('Health & PAL').icon(Activity)
+    )
+  }
 
   if (CONTAINER_TYPES.includes(schemaType)) {
     views.push(S.view.component(QRGenerator).title('QR Codes Liste'))
@@ -90,6 +99,7 @@ export const structure: StructureResolver = (S) =>
             .id('service-center-menu')
             .title('Auftrags-Status')
             .items([
+              // ── Unified Status Views (Tickets + Logbook) ────────
               S.listItem()
                 .title('Offen')
                 .icon(AlertCircle)
@@ -98,7 +108,11 @@ export const structure: StructureResolver = (S) =>
                   S.documentList()
                     .id('logbook-open-list')
                     .title('Offene Auftraege')
-                    .filter('_type == "logbookEntry" && status == "open"')
+                    .filter(
+                      '(_type == "logbookEntry" && status == "open") || ' +
+                      '(_type == "ticket" && status in ["pending_approval", "approved"])'
+                    )
+                    .defaultOrdering([{field: '_createdAt', direction: 'desc'}])
                 ),
               S.listItem()
                 .title('In Arbeit')
@@ -109,8 +123,10 @@ export const structure: StructureResolver = (S) =>
                     .id('logbook-in-progress-list')
                     .title('In Arbeit')
                     .filter(
-                      '_type == "logbookEntry" && status == "in_progress"'
+                      '(_type == "logbookEntry" && status == "in_progress") || ' +
+                      '(_type == "ticket" && status == "in_progress")'
                     )
+                    .defaultOrdering([{field: '_createdAt', direction: 'desc'}])
                 ),
               S.listItem()
                 .title('Erledigt')
@@ -120,7 +136,11 @@ export const structure: StructureResolver = (S) =>
                   S.documentList()
                     .id('logbook-done-list')
                     .title('Erledigte Auftraege')
-                    .filter('_type == "logbookEntry" && status == "done"')
+                    .filter(
+                      '(_type == "logbookEntry" && status == "done") || ' +
+                      '(_type == "ticket" && status == "completed")'
+                    )
+                    .defaultOrdering([{field: '_createdAt', direction: 'desc'}])
                 ),
               S.divider(),
               S.listItem()
@@ -199,6 +219,9 @@ export const structure: StructureResolver = (S) =>
                           '_type == "property" && tenant._ref == $tenantId'
                         )
                         .params({tenantId})
+                        .initialValueTemplates([
+                          S.initialValueTemplateItem('property-by-tenant', {tenantId}),
+                        ])
                         .child((propertyId) =>
                           S.list()
                             .id(`property-menu-${propertyId}`)
@@ -328,10 +351,9 @@ export const structure: StructureResolver = (S) =>
                                                                     .icon(Box)
                                                                     .id(`assets-unit-item-${unitId}`)
                                                                     .child(
-                                                                      S.documentList()
+                                                                      S.documentTypeList('asset')
                                                                         .id(`assets-unit-${unitId}`)
-                                                                        .title('Assets')
-                                                                        .schemaType('asset')
+                                                                        .title('Assets (Wohnung)')
                                                                         .filter(
                                                                           '_type == "asset" && location._ref == $unitId'
                                                                         )

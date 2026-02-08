@@ -31,15 +31,18 @@ export function ApproveTicketAction(props: any) {
       }
 
       // 2. Update Document
+      // NOTE: We store the approver's name/email as a string, NOT as a
+      // reference. Sanity's currentUser.id is an internal system ID
+      // (e.g. "pSMZvxePy"), not a document in the "user" collection.
+      // Using it as a _ref causes "references non-existent document" errors.
       patch.execute([
         {set: {status: 'in_progress'}},
         {set: {approvedAt: new Date().toISOString()}},
-        // Track who approved it
         ...(currentUser
           ? [
               {
                 set: {
-                  approvedBy: {_type: 'reference', _ref: currentUser.id},
+                  approvedByName: currentUser.name || currentUser.email || 'Unknown',
                 },
               },
             ]
