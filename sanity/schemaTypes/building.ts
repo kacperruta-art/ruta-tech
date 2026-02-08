@@ -4,7 +4,7 @@ import {QRCodeInput} from '../components/QRCodeInput'
 
 // Canton List (Standard CH)
 const cantonOptions = [
-  {title: 'Zuerich', value: 'ZH'},
+  {title: 'Zürich', value: 'ZH'},
   {title: 'Bern', value: 'BE'},
   {title: 'Luzern', value: 'LU'},
   {title: 'Uri', value: 'UR'},
@@ -21,7 +21,7 @@ const cantonOptions = [
   {title: 'Appenzell A.Rh.', value: 'AR'},
   {title: 'Appenzell I.Rh.', value: 'AI'},
   {title: 'St. Gallen', value: 'SG'},
-  {title: 'Graubuenden', value: 'GR'},
+  {title: 'Graubünden', value: 'GR'},
   {title: 'Aargau', value: 'AG'},
   {title: 'Thurgau', value: 'TG'},
   {title: 'Tessin', value: 'TI'},
@@ -35,7 +35,7 @@ const cantonOptions = [
 // Service Roles Matrix
 const serviceRoleOptions = [
   {title: 'Facility Management (Hauswartung)', value: 'facility'},
-  {title: 'HLKS (Heizung/Lueftung/Sanitaer)', value: 'hvac'},
+  {title: 'HLKS (Heizung/Lüftung/Sanitär)', value: 'hvac'},
   {title: 'Aufzug (Lift)', value: 'lift'},
   {title: 'Elektro', value: 'electrician'},
   {title: 'Reinigung', value: 'cleaning'},
@@ -46,13 +46,13 @@ const serviceRoleOptions = [
 
 export const building = defineType({
   name: 'building',
-  title: 'Gebaeude',
+  title: 'Gebäude',
   type: 'document',
   icon: Home,
   groups: [
     {name: 'context', title: 'Basisdaten', default: true},
     {name: 'admin', title: 'Register & IDs', icon: FileBadge},
-    {name: 'structure', title: 'Substanz & Flaechen', icon: Scale},
+    {name: 'structure', title: 'Substanz & Flächen', icon: Scale},
     {name: 'energy', title: 'Energie & Technik', icon: Zap},
     {name: 'access', title: 'Zugang', icon: Settings},
     {name: 'services', title: 'Dienstleister', icon: Users},
@@ -71,7 +71,7 @@ export const building = defineType({
     // === Group: context ===
     defineField({
       name: 'name',
-      title: 'Gebaeude-Name / Nummer',
+      title: 'Gebäude-Name / Nummer',
       type: 'string',
       group: 'context',
       description: 'z.B. "Haus A" oder "Bahnhofstrasse 44"',
@@ -87,7 +87,7 @@ export const building = defineType({
     }),
     defineField({
       name: 'property',
-      title: 'Gehoert zu Liegenschaft',
+      title: 'Gehört zu Liegenschaft',
       type: 'reference',
       to: [{type: 'property'}],
       group: 'context',
@@ -114,7 +114,7 @@ export const building = defineType({
     // === Group: admin (Official IDs) ===
     defineField({
       name: 'egid',
-      title: 'EGID (Eidg. Gebaeudeidentifikator)',
+      title: 'EGID (Eidg. Gebäudeidentifikator)',
       type: 'number',
       group: 'admin',
       description: 'Offizielle Nummer im GWR.',
@@ -142,14 +142,14 @@ export const building = defineType({
     // === Group: structure (Metrics) ===
     defineField({
       name: 'cubicVolume',
-      title: 'Gebaeudevolumen (m3)',
+      title: 'Gebäudevolumen (m³)',
       type: 'number',
       group: 'structure',
       description: 'GVZ-Volumen',
     }),
     defineField({
       name: 'rentableArea',
-      title: 'Hauptnutzflaeche (HNF m2)',
+      title: 'Hauptnutzfläche (HNF m²)',
       type: 'number',
       group: 'structure',
     }),
@@ -167,7 +167,7 @@ export const building = defineType({
       options: {
         list: [
           {title: 'Flachdach (Kies)', value: 'flat_gravel'},
-          {title: 'Flachdach (Begrunt)', value: 'flat_green'},
+          {title: 'Flachdach (Begrünt)', value: 'flat_green'},
           {title: 'Steildach / Ziegel', value: 'pitched'},
           {title: 'Terrasse / Attika', value: 'terrace'},
         ],
@@ -188,29 +188,29 @@ export const building = defineType({
           {title: 'D', value: 'D'},
           {title: 'E', value: 'E'},
           {title: 'F', value: 'F'},
-          {title: 'G (Sanierungsbeduerftig)', value: 'G'},
+          {title: 'G (Sanierungsbedürftig)', value: 'G'},
         ],
       },
     }),
     defineField({
       name: 'heatingType',
-      title: 'Waermeerzeugung',
+      title: 'Wärmeerzeugung',
       type: 'string',
       group: 'energy',
       options: {
         list: [
-          {title: 'Waermepumpe (Luft/Wasser)', value: 'hp_air'},
-          {title: 'Waermepumpe (Erdsonde)', value: 'hp_ground'},
-          {title: 'Fernwaerme', value: 'district'},
+          {title: 'Wärmepumpe (Luft/Wasser)', value: 'hp_air'},
+          {title: 'Wärmepumpe (Erdsonde)', value: 'hp_ground'},
+          {title: 'Fernwärme', value: 'district'},
           {title: 'Gasheizung', value: 'gas'},
-          {title: 'Oelheizung', value: 'oil'},
+          {title: 'Ölheizung', value: 'oil'},
           {title: 'Pellets / Holz', value: 'wood'},
         ],
       },
     }),
     defineField({
       name: 'heatDistribution',
-      title: 'Waermeverteilung',
+      title: 'Wärmeverteilung',
       type: 'string',
       group: 'energy',
       options: {
@@ -228,7 +228,7 @@ export const building = defineType({
       title: 'Globaler Chat-PIN',
       type: 'string',
       group: 'access',
-      description: 'Notfall-PIN fuer Mieter (4 Ziffern).',
+      description: 'Notfall-PIN für Mieter (4 Ziffern).',
       validation: (rule) =>
         rule.regex(/^\d{4}$/, {name: '4-digit PIN', invert: false}),
     }),
@@ -243,10 +243,10 @@ export const building = defineType({
     // === Group: services (The Matrix) ===
     defineField({
       name: 'serviceProviders',
-      title: 'Zustaendige Dienstleister',
+      title: 'Zuständige Dienstleister',
       type: 'array',
       group: 'services',
-      description: 'Wer ist fuer dieses Gebaeude zustaendig?',
+      description: 'Wer ist für dieses Gebäude zuständig?',
       of: [
         defineArrayMember({
           type: 'object',
@@ -269,7 +269,7 @@ export const building = defineType({
             }),
             defineField({
               name: 'priority',
-              title: 'Prioritaet',
+              title: 'Priorität',
               type: 'string',
               options: {
                 list: [

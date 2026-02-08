@@ -10,7 +10,7 @@ export const unit = defineType({
   groups: [
     {name: 'core', title: 'Basisdaten', default: true},
     {name: 'admin', title: 'Register & IDs', icon: FileBadge},
-    {name: 'specs', title: 'Flaechen & Zimmer', icon: Ruler},
+    {name: 'specs', title: 'Flächen & Zimmer', icon: Ruler},
     {name: 'tech', title: 'Technik & Sicherheit', icon: ShieldAlert},
     {name: 'people', title: 'Personen', icon: Users},
     {name: 'inventory', title: 'Inventar', icon: Box},
@@ -31,7 +31,7 @@ export const unit = defineType({
       title: 'Interne Bezeichnung',
       type: 'string',
       group: 'core',
-      description: 'z.B. "Wohnung 3.01" oder "Ladenflaeche EG"',
+      description: 'z.B. "Wohnung 3.01" oder "Ladenfläche EG"',
       validation: (rule) => rule.required(),
     }),
     defineField({
@@ -43,7 +43,7 @@ export const unit = defineType({
     }),
     defineField({
       name: 'building',
-      title: 'Gebaeude',
+      title: 'Gebäude',
       type: 'reference',
       to: [{type: 'building'}],
       group: 'core',
@@ -79,7 +79,7 @@ export const unit = defineType({
       options: {
         list: [
           {title: 'Wohnen', value: 'residential'},
-          {title: 'Buero / Gewerbe', value: 'commercial'},
+          {title: 'Büro / Gewerbe', value: 'commercial'},
           {title: 'Gastronomie', value: 'gastro'},
           {title: 'Lager / Archiv', value: 'storage'},
         ],
@@ -93,7 +93,7 @@ export const unit = defineType({
       title: 'EWID (Amtliche Wohnungs-ID)',
       type: 'string',
       group: 'admin',
-      description: 'Code gemaess GWR (z.B. W-01). Wichtig fuer Meldewesen.',
+      description: 'Code gemäss GWR (z.B. W-01). Wichtig für Meldewesen.',
     }),
     defineField({
       name: 'adminNumber',
@@ -114,13 +114,13 @@ export const unit = defineType({
     }),
     defineField({
       name: 'areaHnf',
-      title: 'Hauptnutzflaeche (HNF m2)',
+      title: 'Hauptnutzfläche (HNF m²)',
       type: 'number',
       group: 'specs',
     }),
     defineField({
       name: 'areaOutside',
-      title: 'Aussenflaeche (Balkon/Terrasse m2)',
+      title: 'Aussenfläche (Balkon/Terrasse m²)',
       type: 'number',
       group: 'specs',
     }),
@@ -139,7 +139,7 @@ export const unit = defineType({
       type: 'string',
       group: 'tech',
       description:
-        'Wo muss der Mieter drehen, wenn Wasser auslaeuft? (z.B. "Bad unter Lavabo")',
+        'Wo muss der Mieter drehen, wenn Wasser ausläuft? (z.B. "Bad unter Lavabo")',
     }),
     defineField({
       name: 'fuseBoxLocation',
@@ -189,11 +189,11 @@ export const unit = defineType({
     }),
     defineField({
       name: 'smartDevices',
-      title: 'Verknuepfte Smart-Geraete',
+      title: 'Verknüpfte Smart-Geräte',
       type: 'array',
       group: 'inventory',
       of: [{type: 'reference', to: [{type: 'asset'}]}],
-      description: 'Geraete mit direkter Digitalanbindung.',
+      description: 'Geräte mit direkter Digitalanbindung.',
     }),
 
     // === QR & Identification ===

@@ -7,10 +7,10 @@ export const user = defineType({
   type: 'document',
   icon: User,
   groups: [
-    {name: 'identity', title: 'Identitaet', default: true},
+    {name: 'identity', title: 'Identität', default: true},
     {name: 'residence', title: 'Wohnen & Objekte', icon: Home},
-    {name: 'mobility', title: 'Mobilitaet & Parking', icon: Car},
-    {name: 'access', title: 'Zugang & Schluessel', icon: Key},
+    {name: 'mobility', title: 'Mobilität & Parking', icon: Car},
+    {name: 'access', title: 'Zugang & Schlüssel', icon: Key},
     {name: 'settings', title: 'Einstellungen', icon: Settings},
   ],
   fields: [
@@ -31,7 +31,7 @@ export const user = defineType({
       options: {
         list: [
           {title: 'Mieter / Bewohner', value: 'tenant'},
-          {title: 'Eigentuemer', value: 'owner'},
+          {title: 'Eigentümer', value: 'owner'},
           {title: 'Hauswart / FM', value: 'caretaker'},
           {title: 'Verwalter', value: 'manager'},
           {title: 'Dienstleister', value: 'provider'},
@@ -120,10 +120,10 @@ export const user = defineType({
     // === Group: mobility (The "Garage" Link) ===
     defineField({
       name: 'rentedParkingSpots',
-      title: 'Parkplaetze',
+      title: 'Parkplätze',
       type: 'array',
       group: 'mobility',
-      description: 'Zugeordnete Parkplaetze oder Garagenboxen.',
+      description: 'Zugeordnete Parkplätze oder Garagenboxen.',
       of: [{type: 'reference', to: [{type: 'parkingSpot'}]}],
     }),
     defineField({
@@ -156,16 +156,16 @@ export const user = defineType({
     // === Group: access (Keys & Smart Assets) ===
     defineField({
       name: 'assignedAssets',
-      title: 'Persoenliche Assets / Geraete',
+      title: 'Persönliche Assets / Geräte',
       type: 'array',
       group: 'access',
       description:
-        'Spezifische Geraete, auf die nur dieser User Zugriff hat (z.B. Private Wallbox).',
+        'Spezifische Geräte, auf die nur dieser User Zugriff hat (z.B. Private Wallbox).',
       of: [{type: 'reference', to: [{type: 'asset'}]}],
     }),
     defineField({
       name: 'digitalKeys',
-      title: 'Digitale Schluessel (Badges)',
+      title: 'Digitale Schlüssel (Badges)',
       type: 'array',
       group: 'access',
       of: [
@@ -175,7 +175,7 @@ export const user = defineType({
           fields: [
             defineField({
               name: 'keyId',
-              title: 'Schluessel-ID / Chip-Nr.',
+              title: 'Schlüssel-ID / Chip-Nr.',
               type: 'string',
             }),
             defineField({
@@ -194,7 +194,7 @@ export const user = defineType({
             select: {title: 'label', subtitle: 'keyId', active: 'active'},
             prepare({title, subtitle, active}) {
               return {
-                title: title || 'Schluessel',
+                title: title || 'Schlüssel',
                 subtitle: subtitle,
                 media: active ? ShieldCheck : Key,
               }
@@ -213,7 +213,7 @@ export const user = defineType({
       options: {
         list: [
           {title: 'Deutsch', value: 'de'},
-          {title: 'Franzoesisch', value: 'fr'},
+          {title: 'Französisch', value: 'fr'},
           {title: 'Italienisch', value: 'it'},
           {title: 'Englisch', value: 'en'},
         ],

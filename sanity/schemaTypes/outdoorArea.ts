@@ -40,7 +40,7 @@ export const outdoorArea = defineType({
       type: 'string',
       options: {
         list: [
-          {title: 'Garten / Gruenflaeche', value: 'garden'},
+          {title: 'Garten / Grünfläche', value: 'garden'},
           {title: 'Spielplatz', value: 'playground'},
           {title: 'Hartplatz / Wege', value: 'hardscape'},
           {title: 'Entsorgungsstelle', value: 'waste_area'},
@@ -51,7 +51,7 @@ export const outdoorArea = defineType({
     }),
     defineField({
       name: 'areaSize',
-      title: 'Flaeche (m2)',
+      title: 'Fläche (m²)',
       type: 'number',
     }),
     defineField({
@@ -75,7 +75,7 @@ export const outdoorArea = defineType({
     select: {title: 'name', type: 'type', property: 'property.name'},
     prepare({title, type, property}) {
       const typeLabels: Record<string, string> = {
-        garden: 'Gruenflaeche',
+        garden: 'Grünfläche',
         playground: 'Spielplatz',
         hardscape: 'Wege/Platz',
         waste_area: 'Entsorgung',

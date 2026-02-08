@@ -3,13 +3,13 @@ import {Gauge, History} from 'lucide-react'
 
 export const meterReading = defineType({
   name: 'meterReading',
-  title: 'Zaehlerstand',
+  title: 'Zählerstand',
   type: 'document',
   icon: Gauge,
   fields: [
     defineField({
       name: 'asset',
-      title: 'Zaehler (Asset)',
+      title: 'Zähler (Asset)',
       type: 'reference',
       to: [{type: 'asset'}],
       options: {
@@ -26,7 +26,7 @@ export const meterReading = defineType({
     }),
     defineField({
       name: 'value',
-      title: 'Zaehlerstand (Wert)',
+      title: 'Zählerstand (Wert)',
       type: 'number',
       validation: (rule) => rule.required().min(0),
     }),

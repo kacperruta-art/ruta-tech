@@ -17,7 +17,7 @@ export const parkingSpot = defineType({
   fields: [
     defineField({
       name: 'facility',
-      title: 'Gehoert zu Parkanlage',
+      title: 'Gehört zu Parkanlage',
       type: 'reference',
       to: [{type: 'parkingFacility'}],
       group: 'core',
@@ -122,7 +122,7 @@ export const parkingFacility = defineType({
     }),
     defineField({
       name: 'maxHeight',
-      title: 'Max. Durchfahrtshoehe (m)',
+      title: 'Max. Durchfahrtshöhe (m)',
       type: 'number',
     }),
   ],

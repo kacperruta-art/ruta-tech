@@ -60,9 +60,9 @@ export const maintenancePlan = defineType({
       options: {
         list: [
           {title: 'Monatlich', value: 'monthly'},
-          {title: 'Vierteljaehrlich', value: 'quarterly'},
-          {title: 'Halbjaehrlich', value: 'biannual'},
-          {title: 'Jaehrlich', value: 'annual'},
+          {title: 'Vierteljährlich', value: 'quarterly'},
+          {title: 'Halbjährlich', value: 'biannual'},
+          {title: 'Jährlich', value: 'annual'},
           {title: 'Alle 2 Jahre', value: 'biennial'},
         ],
       },
@@ -77,25 +77,25 @@ export const maintenancePlan = defineType({
     }),
     defineField({
       name: 'nextDueDate',
-      title: 'Naechste Faelligkeit',
+      title: 'Nächste Fälligkeit',
       type: 'date',
       group: 'schedule',
       validation: (rule) => rule.required(),
     }),
     defineField({
       name: 'lastExecutionDate',
-      title: 'Letzte Ausfuehrung',
+      title: 'Letzte Ausführung',
       type: 'date',
       group: 'schedule',
-      description: 'Datum der letzten durchgefuehrten Wartung.',
+      description: 'Datum der letzten durchgeführten Wartung.',
     }),
     defineField({
       name: 'assignedProvider',
-      title: 'Zustaendiger Dienstleister',
+      title: 'Zuständiger Dienstleister',
       type: 'reference',
       group: 'schedule',
       to: [{type: 'provider'}],
-      description: 'Wer fuehrt die Wartung durch?',
+      description: 'Wer führt die Wartung durch?',
     }),
     defineField({
       name: 'description',
@@ -103,7 +103,7 @@ export const maintenancePlan = defineType({
       type: 'text',
       group: 'schedule',
       rows: 3,
-      description: 'Hinweise fuer den Dienstleister oder interne Notizen.',
+      description: 'Hinweise für den Dienstleister oder interne Notizen.',
     }),
 
     // --- 3. TASKS ---
@@ -153,9 +153,9 @@ export const maintenancePlan = defineType({
     prepare({title, nextDate, freq, isActive}) {
       const freqMap: Record<string, string> = {
         monthly: 'Monatlich',
-        quarterly: 'Vierteljaehrlich',
-        biannual: 'Halbjaehrlich',
-        annual: 'Jaehrlich',
+        quarterly: 'Vierteljährlich',
+        biannual: 'Halbjährlich',
+        annual: 'Jährlich',
         biennial: 'Alle 2 Jahre',
       }
 
@@ -168,7 +168,7 @@ export const maintenancePlan = defineType({
 
       return {
         title: `${activePrefix}${title || 'Ohne Titel'}`,
-        subtitle: `${freqLabel} | Naechster: ${dateStr}`,
+        subtitle: `${freqLabel} | Nächster: ${dateStr}`,
         media: CalendarClock,
       }
     },

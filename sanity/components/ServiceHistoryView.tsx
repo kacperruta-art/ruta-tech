@@ -86,7 +86,7 @@ const STATUS_LABELS: Record<string, string> = {
   approved: 'Freigegeben',
   rejected: 'Abgelehnt',
   completed: 'Abgeschlossen',
-  resolved: 'Geloest',
+  resolved: 'Gelöst',
   closed: 'Geschlossen',
   cancelled: 'Storniert',
   canceled: 'Storniert',
@@ -132,7 +132,7 @@ const PRIORITY_TONES: Record<
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
   property: 'Liegenschaft',
-  building: 'Gebaeude',
+  building: 'Gebäude',
   floor: 'Stockwerk',
   unit: 'Einheit',
   asset: 'Asset',
@@ -667,7 +667,7 @@ export function ServiceHistoryView(props: any) {
       parts.push(`Suche: "${searchQuery.trim()}"`)
     }
     parts.push(
-      `Sortierung: ${sortOrder === 'desc' ? 'Neueste zuerst' : 'Aelteste zuerst'}`
+      `Sortierung: ${sortOrder === 'desc' ? 'Neueste zuerst' : 'Älteste zuerst'}`
     )
     return parts.join('  |  ')
   }, [statusFilter, typeFilter, searchQuery, sortOrder])
@@ -724,7 +724,7 @@ export function ServiceHistoryView(props: any) {
               <td style={{verticalAlign: 'top', textAlign: 'right', paddingBottom: 10}}>
                 <div className="srv-rpt-meta">Erstellt: {printTimestamp}</div>
                 <div className="srv-rpt-meta" style={{marginTop: 2}}>
-                  {filteredItems.length} Eintraege ({ticketCount} Tickets, {logbookCount} Logbuch)
+                  {filteredItems.length} Einträge ({ticketCount} Tickets, {logbookCount} Logbuch)
                 </div>
               </td>
             </tr>
@@ -750,7 +750,7 @@ export function ServiceHistoryView(props: any) {
                 <th style={{width: '10%'}}>Typ</th>
                 <th>Titel / Beschreibung</th>
                 <th style={{width: '12%'}}>Datum</th>
-                <th style={{width: '10%'}}>Prioritaet</th>
+                <th style={{width: '10%'}}>Priorität</th>
                 <th style={{width: '12%'}}>Status</th>
               </tr>
             </thead>
@@ -763,7 +763,7 @@ export function ServiceHistoryView(props: any) {
                     <tr className="srv-group-header">
                       <td colSpan={6}>
                         Quelle: {sourceName} ({groupItems.length}{' '}
-                        {groupItems.length === 1 ? 'Eintrag' : 'Eintraege'})
+                        {groupItems.length === 1 ? 'Eintrag' : 'Einträge'})
                       </td>
                     </tr>
                     {/* ── Group Data Rows ───────────────── */}
@@ -812,7 +812,7 @@ export function ServiceHistoryView(props: any) {
 
         {filteredItems.length === 0 && (
           <p style={{textAlign: 'center', marginTop: 40}}>
-            Keine Eintraege vorhanden.
+            Keine Einträge vorhanden.
           </p>
         )}
 
@@ -919,7 +919,7 @@ export function ServiceHistoryView(props: any) {
                   text={
                     sortOrder === 'desc'
                       ? 'Neueste zuerst'
-                      : 'Aelteste zuerst'
+                      : 'Älteste zuerst'
                   }
                   mode="ghost"
                   fontSize={1}
@@ -955,7 +955,7 @@ export function ServiceHistoryView(props: any) {
               <Text align="center" muted>
                 {items.length === 0
                   ? 'Keine Service-Historie vorhanden.'
-                  : 'Keine Eintraege fuer diesen Filter.'}
+                  : 'Keine Einträge für diesen Filter.'}
               </Text>
             </Card>
           )}

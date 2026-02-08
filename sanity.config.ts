@@ -79,19 +79,19 @@ export default defineConfig({
     dashboardTool({
       widgets: [
         documentListWidget({
-          title: 'PILNE INTERWENCJE',
+          title: 'DRINGENDE INTERVENTIONEN',
           query: `*[_type == "ticket" && priority in ["emergency", "high"] && status in ["open", "in_progress", "pending_approval"]] | order(_createdAt desc)`,
           limit: 10,
           layout: {width: 'full'},
         }),
         documentListWidget({
-          title: 'WYMIANA SPRZETU (CAPEX)',
+          title: 'GERAETEAUSTAUSCH (CAPEX)',
           query: `*[_type == "asset" && condition in ["poor", "defect", "critical"]] | order(_createdAt desc)`,
           limit: 10,
           layout: {width: 'medium'},
         }),
         documentListWidget({
-          title: 'OSTATNIE ZGLOSZENIA',
+          title: 'LETZTE MELDUNGEN',
           query: `*[_type == "ticket"] | order(_createdAt desc)`,
           limit: 5,
           layout: {width: 'medium'},

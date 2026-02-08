@@ -107,7 +107,7 @@ export const structure: StructureResolver = (S) =>
                 .child(
                   S.documentList()
                     .id('logbook-open-list')
-                    .title('Offene Auftraege')
+                    .title('Offene Aufträge')
                     .filter(
                       '(_type == "logbookEntry" && status == "open") || ' +
                       '(_type == "ticket" && status in ["pending_approval", "approved"])'
@@ -135,7 +135,7 @@ export const structure: StructureResolver = (S) =>
                 .child(
                   S.documentList()
                     .id('logbook-done-list')
-                    .title('Erledigte Auftraege')
+                    .title('Erledigte Aufträge')
                     .filter(
                       '(_type == "logbookEntry" && status == "done") || ' +
                       '(_type == "ticket" && status == "completed")'
@@ -149,7 +149,7 @@ export const structure: StructureResolver = (S) =>
                 .id('all-tickets')
                 .child(S.documentTypeList('ticket').id('all-tickets-list')),
               S.listItem()
-                .title('Alle Eintraege')
+                .title('Alle Einträge')
                 .icon(BookOpen)
                 .id('all-logbook')
                 .child(S.documentTypeList('logbookEntry').id('all-logbook-list')),
@@ -161,17 +161,17 @@ export const structure: StructureResolver = (S) =>
                 .child(
                   S.documentTypeList('maintenancePlan')
                     .id('maintenance-list')
-                    .title('Wartungsplaene')
+                    .title('Wartungspläne')
                     .defaultOrdering([{field: 'nextDueDate', direction: 'asc'}])
                 ),
               S.listItem()
-                .title('Zaehlerstande')
+                .title('Zählerstände')
                 .icon(Gauge)
                 .id('meter-readings')
                 .child(
                   S.documentTypeList('meterReading')
                     .id('meter-readings-list')
-                    .title('Zaehlerstande')
+                    .title('Zählerstände')
                     .defaultOrdering([{field: 'date', direction: 'desc'}])
                 ),
             ])
@@ -240,13 +240,13 @@ export const structure: StructureResolver = (S) =>
 
                               // Buildings
                               S.listItem()
-                                .title('Gebaeude')
+                                .title('Gebäude')
                                 .icon(Building2)
                                 .id(`buildings-item-${propertyId}`)
                                 .child(
                                   S.documentList()
                                     .id(`buildings-${propertyId}`)
-                                    .title('Gebaeude')
+                                    .title('Gebäude')
                                     .schemaType('building')
                                     .filter(
                                       '_type == "building" && property._ref == $propertyId'
@@ -261,10 +261,10 @@ export const structure: StructureResolver = (S) =>
                                     .child((buildingId) =>
                                       S.list()
                                         .id(`building-menu-${buildingId}`)
-                                        .title('Gebaeude-Struktur')
+                                        .title('Gebäude-Struktur')
                                         .items([
                                           S.listItem()
-                                            .title('Gebaeude bearbeiten')
+                                            .title('Gebäude bearbeiten')
                                             .icon(Building2)
                                             .id(`edit-building-${buildingId}`)
                                             .child(
@@ -406,13 +406,13 @@ export const structure: StructureResolver = (S) =>
 
                                           // Assets at building level
                                           S.listItem()
-                                            .title('Assets (Gebaeude)')
+                                            .title('Assets (Gebäude)')
                                             .icon(Box)
                                             .id(`assets-building-item-${buildingId}`)
                                             .child(
                                               S.documentList()
                                                 .id(`assets-building-${buildingId}`)
-                                                .title('Assets (Gebaeude)')
+                                                .title('Assets (Gebäude)')
                                                 .schemaType('asset')
                                                 .filter(
                                                   '_type == "asset" && location._ref == $buildingId'
@@ -453,13 +453,13 @@ export const structure: StructureResolver = (S) =>
                                                 .views(getDocumentViews(S, 'parkingFacility'))
                                             ),
                                           S.listItem()
-                                            .title('Parkplaetze')
+                                            .title('Parkplätze')
                                             .icon(CircleParking)
                                             .id(`spots-item-${facilityId}`)
                                             .child(
                                               S.documentList()
                                                 .id(`spots-${facilityId}`)
-                                                .title('Parkplaetze')
+                                                .title('Parkplätze')
                                                 .schemaType('parkingSpot')
                                                 .filter(
                                                   '_type == "parkingSpot" && facility._ref == $facilityId'

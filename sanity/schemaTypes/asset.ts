@@ -19,13 +19,13 @@ export const asset = defineType({
   type: 'document',
   icon: Package,
   groups: [
-    {name: 'identity', title: 'Identitaet', default: true},
+    {name: 'identity', title: 'Identität', default: true},
     {name: 'lifecycle', title: 'Lifecycle & CAPEX (PAL)', icon: TrendingDown},
     {name: 'location', title: 'Standort', icon: MapPin},
     {name: 'specs', title: 'Technik', icon: Settings},
     {name: 'service', title: 'Service', icon: Wrench},
     {name: 'iot', title: 'IoT', icon: Wifi},
-    {name: 'metering', title: 'Zaehler', icon: Gauge},
+    {name: 'metering', title: 'Zähler', icon: Gauge},
     {name: 'identification', title: 'QR & ID', icon: QrCode},
   ],
   fields: [
@@ -62,11 +62,11 @@ export const asset = defineType({
       group: 'identity',
       options: {
         list: [
-          {title: 'HVAC (Heizung/Lueftung)', value: 'hvac'},
-          {title: 'Sanitaer', value: 'plumbing'},
+          {title: 'HVAC (Heizung/Lüftung)', value: 'hvac'},
+          {title: 'Sanitär', value: 'plumbing'},
           {title: 'Elektro', value: 'electric'},
           {title: 'Weisse Ware', value: 'appliance'},
-          {title: 'Gebaeudehulle', value: 'shell'},
+          {title: 'Gebäudehülle', value: 'shell'},
           {title: 'Aussenanlage', value: 'outdoor'},
         ],
       },
@@ -111,7 +111,7 @@ export const asset = defineType({
       title: 'Wiederbeschaffungswert (CHF)',
       type: 'number',
       group: 'lifecycle',
-      description: 'Geschaetzte Kosten fuer Ersatz heute (CAPEX Basis).',
+      description: 'Geschätzte Kosten für Ersatz heute (CAPEX Basis).',
     }),
     defineField({
       name: 'manualCondition',
@@ -127,7 +127,7 @@ export const asset = defineType({
           {title: 'Defekt (0%)', value: 'defect'},
         ],
       },
-      description: 'Ueberschreibt die automatische Berechnung.',
+      description: 'Überschreibt die automatische Berechnung.',
     }),
     defineField({
       name: 'warrantyExpiration',
@@ -242,11 +242,11 @@ export const asset = defineType({
     }),
 
     // ══════════════════════════════════════════════════
-    // ── METERING (Zaehler) ───────────────────────────
+    // ── METERING (Zähler) ───────────────────────────
     // ══════════════════════════════════════════════════
     defineField({
       name: 'isMeter',
-      title: 'Ist Zaehler?',
+      title: 'Ist Zähler?',
       type: 'boolean',
       group: 'metering',
       initialValue: false,
@@ -277,7 +277,7 @@ export const asset = defineType({
           {title: 'Wasser (Kalt)', value: 'water_cold'},
           {title: 'Wasser (Warm)', value: 'water_hot'},
           {title: 'Gas', value: 'gas'},
-          {title: 'Heizung / Waerme', value: 'heat'},
+          {title: 'Heizung / Wärme', value: 'heat'},
         ],
       },
     }),

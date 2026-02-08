@@ -10,7 +10,7 @@ export const property = defineType({
     {name: 'general', title: 'Basisdaten', default: true},
     {name: 'admin', title: 'Verwaltung & Register', icon: FileText},
     {name: 'insurance', title: 'Versicherung', icon: Shield},
-    {name: 'team', title: 'Team & Zustaendigkeit', icon: Users},
+    {name: 'team', title: 'Team & Zuständigkeit', icon: Users},
   ],
   fields: [
     // --- 1. BASISDATEN ---
@@ -48,11 +48,11 @@ export const property = defineType({
     // --- 2. TEAM ---
     defineField({
       name: 'manager',
-      title: 'Bewirtschafter (Buero)',
+      title: 'Bewirtschafter (Büro)',
       type: 'reference',
       to: [{type: 'user'}],
       group: 'team',
-      description: 'Zustaendig fuer Vertraege und Administration.',
+      description: 'Zuständig für Verträge und Administration.',
     }),
     defineField({
       name: 'caretaker',
@@ -60,7 +60,7 @@ export const property = defineType({
       type: 'reference',
       to: [{type: 'user'}],
       group: 'team',
-      description: 'Zustaendig fuer technische Anliegen vor Ort.',
+      description: 'Zuständig für technische Anliegen vor Ort.',
     }),
 
     // --- 3. VERWALTUNG & REGISTER ---
@@ -78,7 +78,7 @@ export const property = defineType({
     }),
     defineField({
       name: 'egrid',
-      title: 'E-GRID (Eidg. Gebaeude-ID)',
+      title: 'E-GRID (Eidg. Gebäude-ID)',
       type: 'string',
       group: 'admin',
     }),
@@ -86,7 +86,7 @@ export const property = defineType({
     // --- 4. VERSICHERUNG ---
     defineField({
       name: 'insuranceCompany',
-      title: 'Gebaeudeversicherung',
+      title: 'Gebäudeversicherung',
       type: 'string',
       group: 'insurance',
       description: 'z.B. GVZ, AXA, Mobiliar',
