@@ -152,7 +152,7 @@ export async function GET(req: Request) {
         }
 
         // Build the ticket document
-        const ticketDoc: Record<string, unknown> = {
+        const ticketDoc: {_type: string; [key: string]: unknown} = {
           _type: 'ticket',
           title: `Wartung: ${plan.title}`,
           description: plan.description || `Automatisch erstellt aus Wartungsplan: ${plan.title}`,
