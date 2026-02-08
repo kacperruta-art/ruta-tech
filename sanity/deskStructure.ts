@@ -144,12 +144,22 @@ export const structure: StructureResolver = (S) =>
                 ),
               S.divider(),
               S.listItem()
-                .title('Alle Tickets')
+                .title('Ticket-Zentrale')
+                .icon(ClipboardList)
+                .id('ticket-zentrale')
+                .child(
+                  S.component(ServiceHistoryView)
+                    .options({mode: 'global'})
+                    .title('Ticket-Zentrale')
+                    .id('ticket-zentrale-view')
+                ),
+              S.listItem()
+                .title('Alle Tickets (Liste)')
                 .icon(FileText)
                 .id('all-tickets')
                 .child(S.documentTypeList('ticket').id('all-tickets-list')),
               S.listItem()
-                .title('Alle Einträge')
+                .title('Alle Einträge (Liste)')
                 .icon(BookOpen)
                 .id('all-logbook')
                 .child(S.documentTypeList('logbookEntry').id('all-logbook-list')),

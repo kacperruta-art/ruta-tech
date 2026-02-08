@@ -447,7 +447,7 @@ function flattenIds(
   return Array.from(set)
 }
 
-// ── Event Query ──────────────────────────────────────────
+// ── Event Query (Context mode: scoped to IDs) ───────────
 const EVENT_QUERY = `*[
   !(_id in path("drafts.**")) && (
     (_type == "ticket"       && scope._ref  in $ids) ||
@@ -473,6 +473,30 @@ const EVENT_QUERY = `*[
   )
 }[0...100]`
 
+// ── Global Event Query (all tickets + logbook entries) ───
+const GLOBAL_EVENT_QUERY = `*[
+  !(_id in path("drafts.**")) &&
+  _type in ["ticket", "logbookEntry"]
+] | order(coalesce(date, _createdAt) desc) {
+  _id,
+  _type,
+  type,
+  title,
+  status,
+  priority,
+  date,
+  description,
+  _createdAt,
+  "sourceName": select(
+    _type == "ticket"       => coalesce(scope->name, scope->title, scope->number),
+    _type == "logbookEntry" => coalesce(target->name, target->title, target->number)
+  ),
+  "sourceType": select(
+    _type == "ticket"       => scope->_type,
+    _type == "logbookEntry" => target->_type
+  )
+}[0...500]`
+
 // ── Helpers ──────────────────────────────────────────────
 function getItemDate(item: HistoryItem): number {
   const raw = item.date || item._createdAt || ''
@@ -495,13 +519,20 @@ function formatDate(item: HistoryItem): string {
 }
 
 // ── Component ────────────────────────────────────────────
+// Supports two modes:
+//   'context' (default) — scoped to a parent document and its descendants
+//   'global'            — fetches ALL tickets + logbook entries system-wide
 export function ServiceHistoryView(props: any) {
-  const {document} = props
+  const {document, options} = props
+  const mode: 'context' | 'global' = options?.mode || 'context'
+  const isGlobal = mode === 'global'
+
   const doc = document?.displayed
   const documentId: string | undefined = doc?._id
   const documentType: string | undefined = doc?._type
-  const documentName: string =
-    doc?.name || doc?.title || doc?.slug?.current || 'Unbekannt'
+  const documentName: string = isGlobal
+    ? 'Ticket-Zentrale'
+    : doc?.name || doc?.title || doc?.slug?.current || 'Unbekannt'
 
   const client = useClient({apiVersion: '2024-01-01'})
   const [items, setItems] = useState<HistoryItem[]>([])
@@ -514,50 +545,59 @@ export function ServiceHistoryView(props: any) {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
-  // ── Data Fetching (unchanged) ──────────────────────────
+  // ── Data Fetching ──────────────────────────────────────
   const fetchHistory = useCallback(async () => {
-    if (!documentId || !documentType) {
+    // In global mode, we don't need a document context
+    if (!isGlobal && (!documentId || !documentType)) {
       setLoading(false)
       return
     }
 
     setLoading(true)
-    const cleanId = documentId.replace(/^drafts\./, '')
 
     try {
-      const descendantQuery = getDescendantQuery(documentType)
-      let allIds: string[]
-
-      if (descendantQuery) {
-        const result: Record<string, string[]> = await client.fetch(
-          descendantQuery,
-          {id: cleanId}
-        )
-        allIds = flattenIds(result, cleanId)
+      if (isGlobal) {
+        // ── GLOBAL MODE: fetch everything ─────────────────
+        setScope('Alle Tickets & Einträge im System')
+        const results: HistoryItem[] = await client.fetch(GLOBAL_EVENT_QUERY)
+        setItems(results || [])
       } else {
-        allIds = [cleanId]
-      }
+        // ── CONTEXT MODE: scoped to document hierarchy ────
+        const cleanId = documentId!.replace(/^drafts\./, '')
+        const descendantQuery = getDescendantQuery(documentType!)
+        let allIds: string[]
 
-      const childCount = allIds.length - 1
-      if (childCount > 0) {
-        setScope(
-          `${SOURCE_TYPE_LABELS[documentType] || documentType} + ${childCount} Unterobjekt${childCount !== 1 ? 'e' : ''}`
-        )
-      } else {
-        setScope(SOURCE_TYPE_LABELS[documentType] || documentType)
-      }
+        if (descendantQuery) {
+          const result: Record<string, string[]> = await client.fetch(
+            descendantQuery,
+            {id: cleanId}
+          )
+          allIds = flattenIds(result, cleanId)
+        } else {
+          allIds = [cleanId]
+        }
 
-      const results: HistoryItem[] = await client.fetch(EVENT_QUERY, {
-        ids: allIds,
-      })
-      setItems(results || [])
+        const childCount = allIds.length - 1
+        if (childCount > 0) {
+          setScope(
+            `${SOURCE_TYPE_LABELS[documentType!] || documentType} + ${childCount} Unterobjekt${childCount !== 1 ? 'e' : ''}`
+          )
+        } else {
+          setScope(SOURCE_TYPE_LABELS[documentType!] || documentType!)
+        }
+
+        const results: HistoryItem[] = await client.fetch(EVENT_QUERY, {
+          ids: allIds,
+        })
+        setItems(results || [])
+      }
     } catch (err) {
       console.error('ServiceHistoryView: fetch error', err)
       setItems([])
     } finally {
       setLoading(false)
     }
-  }, [documentId, documentType, client])
+  }, [isGlobal, documentId, documentType, client])
 
   useEffect(() => {
     fetchHistory()
